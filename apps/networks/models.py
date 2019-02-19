@@ -38,7 +38,15 @@ class EthDriver(object):
                 tx['tokenAmount'] = Web3.toInt(hexstr=tx['input'][-32:])
                 START_BYTE = 2 + 8 + (64 - 40) # 0x a9059cbb [24 0s] [address]
                 address = '0x' + tx['input'][START_BYTE:START_BYTE+40]
-                tx['tokenTo'] = Web3.toChecksumAddress(address)
+                try:
+                    tx['tokenTo'] = Web3.toChecksumAddress(address)
+                except ValueError as e:
+                    from apps.errors.models import ErrorLog
+                    import traceback
+                    ErrorLog.objects.create(
+                        nickname="Missing or corrupt input data, examine transaction",
+                        traceback='Transaction: %s\n%s'%(tx, traceback.format_exc()))
+                    tx['tokenTo'] = address
                 yield tx
 
 class Software(model_base.NicknamedBase):
