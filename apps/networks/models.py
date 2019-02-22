@@ -45,6 +45,10 @@ class EthDriver(object):
                         nickname="Missing or corrupt input data, examine transaction",
                         traceback='Transaction: %s\n%s'%(tx, e))
                     tx['tokenTo'] = address
+                for key in ['hash', 'blockHash']:
+                    tx[key] = str(tx[key])
+                tx.pop('r', '')
+                tx.pop('s', '')
                 yield tx
 
 class Software(model_base.NicknamedBase):
@@ -109,9 +113,14 @@ class Scanner(model_base.NicknamedBase):
         self.latest_block = next_block
         self.save()
 
-    def process_block(self, block_number):
+    def process_block(self, block_number, save_transactions=False):
         scanlog.info('Processing block: %s @ %s'%(self.network, block_number))
-        transactions = self.network.driver.find_transactions(block_number)
+        transactions = list(self.network.driver.find_transactions(block_number))
+        if save_transactions:
+            import json
+            fh = open('tests/transactions/block-%s.json'%block_number, 'w+')
+            json.dump(transactions, fh, indent=2)
+
         return self.process_transactions(transactions)
 
     def process_transactions(self, transactions):

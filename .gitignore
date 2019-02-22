@@ -7,6 +7,6 @@ airdrop.log
 conf/local.py
 .zappa_env
 .local_env
-*.json
+zappa_settings.json
 .idea
 airdrop.env
