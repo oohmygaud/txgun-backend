@@ -2,7 +2,6 @@ from django.db import models
 from .. import model_base
 from conf import eth
 from web3 import Web3, HTTPProvider
-from zappa.async import task
 import time
 import logging
 
@@ -42,10 +41,9 @@ class EthDriver(object):
                     tx['tokenTo'] = Web3.toChecksumAddress(address)
                 except ValueError as e:
                     from apps.errors.models import ErrorLog
-                    import traceback
                     ErrorLog.objects.create(
                         nickname="Missing or corrupt input data, examine transaction",
-                        traceback='Transaction: %s\n%s'%(tx, traceback.format_exc()))
+                        traceback='Transaction: %s\n%s'%(tx, e))
                     tx['tokenTo'] = address
                 yield tx
 
