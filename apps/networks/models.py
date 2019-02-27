@@ -79,11 +79,10 @@ class Scanner(model_base.NicknamedBase):
 
     def get_watched_addresses(self):
         # TODO: IF LENGTH OF WATCHED > 2000 MAIL ADMINS
-
+        from apps.subscriptions.models import Subscription
+        watched_addresses = [s.watched_address for s in Subscription.objects.all()]
         return list(map(lambda s: s.lower().strip(),
-        ['0x564286362092D8e7936f0549571a803B203aAceD',
-        '0x79BE424293376f08397Da1734DE72D566826D008',
-        '0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8']))
+        watched_addresses))
 
     def in_watch_cache(self, tx):
         # We'll eventually need to move the lookup to
@@ -124,9 +123,15 @@ class Scanner(model_base.NicknamedBase):
         return self.process_transactions(transactions)
 
     def process_transactions(self, transactions):
+        from apps.subscriptions.models import Subscription
         for tx in transactions:
             if self.in_watch_cache(tx):
                 scanlog.info('Found transaction: %s'%tx)
+                subscriptions = Subscription.objects.filter(
+                    watched_address__in = [tx['to'], tx['from']]
+                )
+                for subscription in subscriptions:
+                    subscription.found_transaction(tx)
                 if tx.get('isToken'):
                     from apps.contracts.models import Contract
                     contract, _new = Contract.DISCOVERED_TOKEN(self.network, tx['to'])

@@ -10,3 +10,4 @@ conf/local.py
 zappa_settings.json
 .idea
 airdrop.env
+.vscode

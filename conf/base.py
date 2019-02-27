@@ -70,6 +70,11 @@ TEMPLATES = [
 
 ALLOWED_HOSTS = ['txgun.io', '127.0.0.1', 'localhost', '*']
 
+REST_FRAMEWORK = {
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'PAGE_SIZE': 10
+}
+
 if not DEBUG:
     AWS_REGION = "us-east-2"
     #AWS_ACCESS_KEY_ID = 'AKIAIACHQX4RGS2BAYAQ'
@@ -88,3 +93,4 @@ if not DEBUG:
     # you need to specify a region, like so:
     AWS_SES_REGION_NAME = 'us-east-1'
     AWS_SES_REGION_ENDPOINT = 'email.us-east-1.amazonaws.com'
+
