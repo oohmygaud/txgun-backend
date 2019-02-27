@@ -16,14 +16,18 @@ class SubscriptionList(generics.ListCreateAPIView):
         serializer.save(user=self.request.user)
 
     def get_queryset(self):
-        return Subscription.objects.filter(user = self.request.user)
+        if not self.request.user.is_authenticated:
+            return Subscription.objects.none()
+        return Subscription.objects.filter(user=self.request.user)
 
 class SubscriptionDetail(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = (IsOwner,)
     serializer_class = SubscriptionSerializer
 
     def get_queryset(self):
-        return Subscription.objects.filter(user = self.request.user)
+        if not self.request.user.is_authenticated:
+            return Subscription.objects.none()
+        return Subscription.objects.filter(user=self.request.user)
 
 class UserList(generics.ListAPIView):
     permission_classes = (IsOwner,)
