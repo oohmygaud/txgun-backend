@@ -1,15 +1,16 @@
-from .models import Subscription
+from .models import Subscription, SubscribedTransaction
 from django.contrib.auth.models import User
-from .serializers import SubscriptionSerializer, UserSerializer
+from .serializers import SubscriptionSerializer, UserSerializer, SubscribedTransactionSerializer
 from .permissions import IsOwner
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework.reverse import reverse
 from rest_framework import renderers
 from rest_framework import generics
+from datetime import datetime
+
 
 class SubscriptionList(generics.ListCreateAPIView):
-    permission_classes = (IsOwner,)
     serializer_class = SubscriptionSerializer
 
     def perform_create(self, serializer):
@@ -18,10 +19,16 @@ class SubscriptionList(generics.ListCreateAPIView):
     def get_queryset(self):
         if not self.request.user.is_authenticated:
             return Subscription.objects.none()
-        return Subscription.objects.filter(user=self.request.user)
+        qs = Subscription.objects.filter(user=self.request.user)
+
+        if self.request.query_params.get('show_archived', '').lower() != 'true':
+            qs = qs.exclude(archived_at__lte=datetime.utcnow())
+
+        return qs
+
+
 
 class SubscriptionDetail(generics.RetrieveUpdateDestroyAPIView):
-    permission_classes = (IsOwner,)
     serializer_class = SubscriptionSerializer
 
     def get_queryset(self):
@@ -29,15 +36,26 @@ class SubscriptionDetail(generics.RetrieveUpdateDestroyAPIView):
             return Subscription.objects.none()
         return Subscription.objects.filter(user=self.request.user)
 
+
 class UserList(generics.ListAPIView):
     permission_classes = (IsOwner,)
     queryset = User.objects.all()
     serializer_class = UserSerializer
 
+
 class UserDetail(generics.RetrieveAPIView):
     permission_classes = (IsOwner,)
     queryset = User.objects.all()
     serializer_class = UserSerializer
+
+class TransactionList(generics.ListAPIView):
+    serializer_class = SubscribedTransactionSerializer
+
+    def get_queryset(self):
+        if not self.request.user.is_authenticated:
+            return SubscribedTransaction.objects.none()
+        return SubscribedTransaction.objects.filter(subscription__user=self.request.user)
+
 
 @api_view(['GET'])
 def api_root(request, format=None):
