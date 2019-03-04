@@ -35,6 +35,12 @@ LOGGING['loggers']['scanner'] = {
     'handlers': ['console'],
     'level': os.getenv('DJANGO_LOG_LEVEL', 'DEBUG')
 }
+
+LOGGING['loggers']['subscriptions'] = {
+    'handlers': ['console'],
+    'level': os.getenv('DJANGO_LOG_LEVEL', 'DEBUG')
+}
+
 TEMPLATES = [
     {
         # See: https://docs.djangoproject.com/en/dev/ref/settings/#std:setting-TEMPLATES-BACKEND

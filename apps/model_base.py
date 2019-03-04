@@ -3,7 +3,7 @@ from django.db import models
 class NicknamedBase(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    nickname = models.CharField(max_length=255)
+    nickname = models.CharField(max_length=255, null=True, blank=True)
     
     @classmethod
     def UNIQUE(cls, nickname, **defaults):
