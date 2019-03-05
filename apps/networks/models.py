@@ -49,7 +49,8 @@ class EthDriver(object):
                     tx[key] = str(tx[key])
                 tx.pop('r', '')
                 tx.pop('s', '')
-                yield tx
+
+            yield tx
 
 class Software(model_base.NicknamedBase):
     def get_driver(self, network):
@@ -81,16 +82,19 @@ class Scanner(model_base.NicknamedBase):
         # TODO: IF LENGTH OF WATCHED > 2000 MAIL ADMINS
         from apps.subscriptions.models import Subscription
         watched_addresses = [s.watched_address for s in Subscription.objects.all()]
-        return list(map(lambda s: s.lower().strip(),
-        watched_addresses))
+        cleaned = list(map(lambda s: s.lower().strip(), watched_addresses))
+        print('Watch addresses:', cleaned)
+        return cleaned
 
     def in_watch_cache(self, tx):
         # We'll eventually need to move the lookup to
         # a sql query, once it is no longer memory efficient
         # to do here
         get = lambda key: (tx.get(key, '') or '').lower()
-        watched = lambda key: get(key) and get(key) in self.watched_cache
-        return watched('to') or watched('from') or watched('tokenTo')
+        to = get('to')
+        frm = get('from')
+        tkto = get('tokenTo')
+        return to in self.watched_cache or frm in self.watched_cache or tkto in self.watched_cache
 
     @property
     def watched_cache(self):
@@ -113,8 +117,11 @@ class Scanner(model_base.NicknamedBase):
         self.save()
 
     def process_block(self, block_number, save_transactions=False):
-        scanlog.info('Processing block: %s @ %s'%(self.network, block_number))
         transactions = list(self.network.driver.find_transactions(block_number))
+        
+        scanlog.info('Processing block: %s @ %s - %s transactions'%(
+            self.network, block_number, len(transactions)))
+        
         if save_transactions:
             import json
             fh = open('tests/transactions/block-%s.json'%block_number, 'w+')
@@ -128,7 +135,8 @@ class Scanner(model_base.NicknamedBase):
             if self.in_watch_cache(tx):
                 scanlog.info('Found transaction: %s'%tx)
                 subscriptions = Subscription.objects.filter(
-                    watched_address__in = [tx['to'], tx['from']]
+                    models.Q(watched_address__iexact=tx['to']) |
+                    models.Q(watched_address__iexact=tx['from'])
                 )
                 for subscription in subscriptions:
                     subscription.found_transaction(tx)
