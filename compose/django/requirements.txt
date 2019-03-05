@@ -17,3 +17,4 @@ coincurve
 eth-keys
 pandoc
 ethereum
+django-filter
