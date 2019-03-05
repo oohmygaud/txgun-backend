@@ -15,3 +15,4 @@ class UserSerializer(serializers.ModelSerializer):
 class SubscribedTransactionSerializer(serializers.ModelSerializer):
     class Meta:
         model = SubscribedTransaction
+        fields = ('__all__')

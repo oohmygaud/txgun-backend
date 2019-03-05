@@ -6,6 +6,7 @@ from apps.subscriptions.models import Subscription, SubscribedTransaction
 from django.contrib.auth.models import User
 from apps.networks.models import TEST_SCANNER
 from datetime import datetime, timedelta
+from scripts.daily_summary import run as daily_summary
 import json
 import pytest
 import io
@@ -43,6 +44,36 @@ class SubscriptionTestCase(TestCase):
 
         self.assertEqual(len(mail.outbox), 1)
         self.assertEqual(mail.outbox[0].subject, 'Transaction Received')
+
+
+    def test_summary_emails(self):
+        scanner = TEST_SCANNER()
+        tx_list = json.load(open('tests/transactions/block-5000015.json'))
+
+        test_user = User.objects.create_user(username="audrey", email="test@audrey.com", password="audrey")
+        
+        # Create a subscription for an email address
+        subscription = Subscription.objects.create(
+            notify_email = test_user.email,
+            watched_address = "0x4D468cf47eB6DF39618dc9450Be4B56A70A520c1",
+            user = test_user,
+            watch_token_transfers = True,
+            summary_notifications = True,
+        )
+
+        # then process the transactions
+        scanner.process_transactions(tx_list)
+
+        daily_summary()
+        self.assertEqual(len(mail.outbox), 2)
+        self.assertEqual(mail.outbox[1].subject, 'Notification Summary')
+
+        two_days_ago = datetime.utcnow() - timedelta(days=2)
+        subscription.transactions.all().update(created_at=two_days_ago)
+
+        daily_summary()
+        self.assertEqual(len(mail.outbox), 2, "Summary shouldn't be sent if no tx received today")
+
 
     def test_subscription_api(self):
         from apps.subscriptions import views
