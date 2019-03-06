@@ -45,11 +45,15 @@ class EthDriver(object):
                         nickname="Missing or corrupt input data, examine transaction",
                         traceback='Transaction: %s\n%s'%(tx, e))
                     tx['tokenTo'] = address
-                for key in ['hash', 'blockHash']:
-                    tx[key] = str(tx[key])
-                tx.pop('r', '')
-                tx.pop('s', '')
 
+            for key in ['hash', 'blockHash']:
+                tx[key] = tx[key].hex()
+
+            tx.pop('r', '')
+            tx.pop('s', '')
+            tx.pop('v', '')
+
+            print(tx)
             yield tx
 
 class Software(model_base.NicknamedBase):
