@@ -19,14 +19,18 @@ INSTALLED_APPS = [
     'rest_framework',
     'auditlog',
 
+    'django_filters',
     'django_extensions',
+    
     'apps.networks',
     'apps.subscriptions',
     'apps.errors',
     'apps.contracts',
-    'django_filters'
+    'apps.users'
 
 ]
+
+AUTH_USER_MODEL = 'users.CustomUser'
 
 DATABASES = {
     'default': env.db('DATABASE_URL', default='psql://tritium:tritium@psql/tritium'),

@@ -1,5 +1,4 @@
 from .models import Subscription, SubscribedTransaction
-from django.contrib.auth.models import User
 from .serializers import SubscriptionSerializer, UserSerializer, SubscribedTransactionSerializer
 from .permissions import IsOwner
 from rest_framework.decorators import api_view
@@ -9,6 +8,7 @@ from rest_framework import renderers
 from rest_framework import generics
 from datetime import datetime
 from django_filters import rest_framework as filters
+from apps.users.models import CustomUser as User
 
 
 class SubscriptionList(generics.ListCreateAPIView):

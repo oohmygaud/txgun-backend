@@ -10,10 +10,11 @@ import textwrap
 
 from django.http import HttpResponse
 from django.views.generic.base import View
+from apps.users.views import Dashboard
 
 
 class HomePageView(View):
-    def dispatch(request, *args, **kwargs):
+    def dispatch(self, request, *args, **kwargs):
         response_text = textwrap.dedent('''\
             <html>
             <head>
@@ -28,7 +29,7 @@ class HomePageView(View):
         return HttpResponse(response_text)
 
 class StatusPageView(View):
-    def dispatch(request, *args, **kwargs):
+    def dispatch(self, request, *args, **kwargs):
         from apps.networks.models import Scanner
         from apps.contracts.models import Contract
         main = Scanner.MAIN()
@@ -45,5 +46,6 @@ urlpatterns = [
     url(r'^', include('apps.subscriptions.urls')),
     url(r'^status', StatusPageView.as_view(), name='status'),
     url(r'^$', HomePageView.as_view(), name='home'),
+    url(r'^dashboard', Dashboard.as_view(), name='dashboard')
 ]
 

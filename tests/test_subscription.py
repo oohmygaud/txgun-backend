@@ -3,7 +3,7 @@ from django.core import mail
 from rest_framework.test import APIClient, APIRequestFactory
 from rest_framework.test import force_authenticate
 from apps.subscriptions.models import Subscription, SubscribedTransaction
-from django.contrib.auth.models import User
+from apps.users.models import CustomUser as User
 from apps.networks.models import TEST_SCANNER
 from datetime import datetime, timedelta
 from scripts.daily_summary import run as daily_summary

@@ -8,6 +8,7 @@ import logging
 
 log = logging.getLogger('subscriptions')
 
+
 class Subscription(model_base.NicknamedBase):
     objects = models.Manager()
     notify_email = models.CharField(max_length=128, null=True, blank=True)
@@ -19,27 +20,11 @@ class Subscription(model_base.NicknamedBase):
     summary_notifications = models.BooleanField(default=False)
 
     def found_transaction(self, tx):
-        log.info('Found transaction: %s' % tx)        
+        log.info('Found transaction: %s' % tx)
         if self.watch_token_transfers == False and tx['isToken']:
-            log.debug('Its a token transaction and we arent watching tokens, skip')
+            log.debug(
+                'Its a token transaction and we arent watching tokens, skip')
             return
-
-        
-        if self.notify_email:
-            log.debug('Email TX Notification to %s'%self.notify_email)
-            send_mail(
-                'Transaction Received',
-                json.dumps(tx, indent=2),
-                'noreply@txgun.io',
-                [self.notify_email],
-                fail_silently=False,
-            )
-
-        if self.notify_url:
-            log.debug('Webhook TX Notification to %s'%self.notify_url)
-            r = requests.post(self.notify_url, data=tx)
-            log.debug('Webhook response: %s'%r.content)
-
 
         SubscribedTransaction.objects.create(
             subscription=self,
@@ -56,9 +41,25 @@ class Subscription(model_base.NicknamedBase):
             value=tx['value'],
             has_data=tx['hasData'],
             is_token=tx['isToken'],
-            token_amount=tx['tokenAmount'],
-            token_to=tx['tokenTo']
+            token_amount=tx.get('tokenAmount', 0),
+            token_to=tx.get('tokenTo', '')
         )
+
+        if self.notify_url:
+            log.debug('Webhook TX Notification to %s' % self.notify_url)
+            r = requests.post(self.notify_url, data=tx)
+            log.debug('Webhook response: %s' % r.content)
+
+        if self.notify_email:
+            log.debug('Email TX Notification to %s' % self.notify_email)
+            send_mail(
+                'Transaction Received',
+                json.dumps(tx, indent=2),
+                'noreply@txgun.io',
+                [self.notify_email],
+                fail_silently=False,
+            )
+
     class Meta:
         ordering = ('-created_at',)
 
@@ -69,17 +70,17 @@ class SubscribedTransaction(models.Model):
     subscription = models.ForeignKey(Subscription, on_delete=models.CASCADE,
                                      related_name='transactions')
     block_hash = models.TextField()
-    block_number = models.CharField(max_length=64)
+    block_number = models.PositiveIntegerField()
     from_address = models.CharField(max_length=64)
-    gas = models.CharField(max_length=64)
-    gas_price = models.CharField(max_length=64)
+    gas = models.PositiveIntegerField()
+    gas_price = models.DecimalField(max_digits=50, decimal_places=0)
     tx_hash = models.TextField()
     tx_input = models.TextField()
-    nonce = models.CharField(max_length=64)
+    nonce = models.PositiveIntegerField()
     to_address = models.CharField(max_length=64)
-    transaction_index = models.CharField(max_length=64)
-    value = models.CharField(max_length=64)
+    transaction_index = models.PositiveIntegerField()
+    value = models.DecimalField(max_digits=50, decimal_places=0)
     has_data = models.BooleanField()
     is_token = models.BooleanField()
-    token_amount = models.CharField(max_length=64)
+    token_amount = models.DecimalField(max_digits=50, decimal_places=0)
     token_to = models.CharField(max_length=64)
