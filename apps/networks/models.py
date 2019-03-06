@@ -53,7 +53,6 @@ class EthDriver(object):
             tx.pop('s', '')
             tx.pop('v', '')
 
-            print(tx)
             yield tx
 
 class Software(model_base.NicknamedBase):
