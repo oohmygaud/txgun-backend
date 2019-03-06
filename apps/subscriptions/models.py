@@ -16,6 +16,7 @@ class Subscription(model_base.NicknamedBase):
     notify_url = models.CharField(max_length=2048, null=True, blank=True)
     archived_at = models.DateTimeField(null=True, blank=True)
     watch_token_transfers = models.BooleanField(default=False)
+    summary_notifications = models.BooleanField(default=False)
 
     def found_transaction(self, tx):
         log.info('Found transaction: %s' % tx)        
@@ -64,6 +65,7 @@ class Subscription(model_base.NicknamedBase):
 
 class SubscribedTransaction(models.Model):
     objects = models.Manager()
+    created_at = models.DateTimeField(auto_now_add=True)
     subscription = models.ForeignKey(Subscription, on_delete=models.CASCADE,
                                      related_name='transactions')
     block_hash = models.TextField()

@@ -13,7 +13,7 @@ class NicknamedBase(models.Model):
             return cls.objects.create(nickname=nickname, **defaults)
 
     def __str__(self):
-        return self.nickname
+        return self.nickname or "unnamed"
 
     class Meta:
         abstract = True

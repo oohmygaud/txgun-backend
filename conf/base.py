@@ -23,7 +23,8 @@ INSTALLED_APPS = [
     'apps.networks',
     'apps.subscriptions',
     'apps.errors',
-    'apps.contracts'
+    'apps.contracts',
+    'django_filters'
 
 ]
 

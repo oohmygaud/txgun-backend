@@ -8,10 +8,18 @@ from rest_framework.reverse import reverse
 from rest_framework import renderers
 from rest_framework import generics
 from datetime import datetime
+from django_filters import rest_framework as filters
 
 
 class SubscriptionList(generics.ListCreateAPIView):
     serializer_class = SubscriptionSerializer
+    filter_backends = (filters.DjangoFilterBackend,)
+    filterset_fields = ('notify_email',
+                        'watched_address',
+                        'notify_url',
+                        'archived_at',
+                        'watch_token_transfers',
+                        'summary_notifications')
 
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
@@ -25,7 +33,6 @@ class SubscriptionList(generics.ListCreateAPIView):
             qs = qs.exclude(archived_at__lte=datetime.utcnow())
 
         return qs
-
 
 
 class SubscriptionDetail(generics.RetrieveUpdateDestroyAPIView):
