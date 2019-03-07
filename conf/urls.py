@@ -11,7 +11,7 @@ import textwrap
 
 from django.http import HttpResponse
 from django.views.generic.base import View
-from apps.users.views import Dashboard
+from apps.users.views import Dashboard, APICreditList, MyAPICredits
 
 
 class HomePageView(View):
@@ -49,6 +49,8 @@ urlpatterns = [
     path('dashboard', Dashboard.as_view(), name='dashboard'),
     path('accounts/', include('rest_registration.api.urls')),
     path('/', HomePageView.as_view(), name='home'),
+    path('api_balance', MyAPICredits.as_view(), name='api_balance'),
+    path('api_credit_statement', APICreditList.as_view(), name='api_credit_statement')
 
 ]
 

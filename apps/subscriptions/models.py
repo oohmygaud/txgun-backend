@@ -5,6 +5,7 @@ from django.core.mail import send_mail
 import json
 import requests
 import logging
+from django.conf import settings
 
 log = logging.getLogger('subscriptions')
 
@@ -49,6 +50,9 @@ class Subscription(model_base.NicknamedBase):
             log.debug('Webhook TX Notification to %s' % self.notify_url)
             r = requests.post(self.notify_url, data=tx)
             log.debug('Webhook response: %s' % r.content)
+            self.user.api_credits.create(
+                amount=settings.NOTIFICATION_CREDIT_COST * -1,
+                description='Webhook Notification')
 
         if self.notify_email:
             log.debug('Email TX Notification to %s' % self.notify_email)
@@ -59,6 +63,9 @@ class Subscription(model_base.NicknamedBase):
                 [self.notify_email],
                 fail_silently=False,
             )
+            self.user.api_credits.create(
+                amount=settings.NOTIFICATION_CREDIT_COST * -1,
+                description='Email Notification')
 
     class Meta:
         ordering = ('-created_at',)

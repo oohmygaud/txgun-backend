@@ -189,3 +189,23 @@ class SubscriptionTestCase(TestCase):
 
         self.assertEqual(1, subscription2.transactions.count())
 
+    def test_api_credit(self):
+        test_user = User.objects.create_user(username="lee", email="test@lee.com", password="lee")
+
+        self.assertEqual(1, test_user.api_credits.count())
+        self.assertEqual(1000, test_user.current_credit_balance())
+
+        subscription = Subscription.objects.create(
+            notify_email = test_user.email,
+            watched_address = "0x4D468cf47eB6DF39618dc9450Be4B56A70A520c1",
+            user = test_user,
+            watch_token_transfers = True
+        )
+        scanner = TEST_SCANNER()
+        tx_list = json.load(open('tests/transactions/block-5000015.json'))
+        scanner.process_transactions(tx_list)
+
+        self.assertEqual(1, subscription.transactions.count())
+        self.assertEqual(2, test_user.api_credits.count())
+        self.assertEqual(999, test_user.current_credit_balance())
+

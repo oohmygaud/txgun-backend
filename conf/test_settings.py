@@ -23,7 +23,8 @@ from django.core import mail
 print('TEST MODE: Using dummy MockEmailBackend')
 class MockEmailBackend(BaseEmailBackend):
     def send_messages(self, messages):
-        mail.outbox.extend(messages)
+        if(hasattr(mail, 'outbox')):
+            mail.outbox.extend(messages)
         return len(messages)
 
 EMAIL_BACKEND='conf.test_settings.MockEmailBackend'

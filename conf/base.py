@@ -114,3 +114,7 @@ if not DEBUG:
     AWS_SES_REGION_NAME = 'us-east-1'
     AWS_SES_REGION_ENDPOINT = 'email.us-east-1.amazonaws.com'
 
+# EMAIL_BACKEND='conf.test_settings.MockEmailBackend'
+
+SIGNUP_BONUS_CREDITS = 1000
+NOTIFICATION_CREDIT_COST = 1

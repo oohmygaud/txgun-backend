@@ -4,7 +4,9 @@ from rest_framework.response import Response
 from apps.subscriptions.models import Subscription, SubscribedTransaction
 from datetime import datetime, timedelta
 from django.db.models import Sum
-from apps.subscriptions.serializers import SubscribedTransactionSerializer
+from apps.subscriptions.serializers import SubscribedTransactionSerializer, APICreditSerializer
+from apps.users.models import APICredit
+from rest_framework import generics
 
 # Create your views here.
 
@@ -38,3 +40,25 @@ class Dashboard(APIView):
             'total_tokens': total_tokens or 0,
             'transactions': SubscribedTransactionSerializer(my_transactions[:10], many=True).data
         })
+
+class MyAPICredits(APIView):
+    def get(self, request, format=None):
+        if not self.request.user.is_authenticated:
+            return Response({'error': 'You are not logged in'}, status=401)
+
+        total_credits = APICredit.objects.filter(user=self.request.user).aggregate(Sum('amount'))
+
+        return Response({
+            'api_credit_balance': total_credits or 0
+        })
+
+class APICreditList(generics.ListAPIView):
+    serializer_class = APICreditSerializer
+
+    def get_queryset(self):
+        if not self.request.user.is_authenticated:
+            return APICredit.objects.none()
+        return APICredit.objects.filter(user=self.request.user)
+
+
+
