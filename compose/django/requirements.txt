@@ -18,3 +18,4 @@ eth-keys
 pandoc
 ethereum
 django-filter
+django-rest-registration

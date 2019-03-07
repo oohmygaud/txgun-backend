@@ -17,6 +17,7 @@ INSTALLED_APPS = [
     'storages',
     'django_s3_storage',
     'rest_framework',
+    'rest_registration',
     'auditlog',
 
     'django_filters',
@@ -29,6 +30,14 @@ INSTALLED_APPS = [
     'apps.users'
 
 ]
+
+REST_REGISTRATION = {
+    'REGISTER_VERIFICATION_URL': 'https://txgun.io/verify-user/',
+    'RESET_PASSWORD_VERIFICATION_URL': 'https://txgun.io/reset-password/',
+    'REGISTER_EMAIL_VERIFICATION_URL': 'https://txgun.io/verify-email/',
+
+    'VERIFICATION_FROM_EMAIL': 'noreply@txgun.io',
+}
 
 AUTH_USER_MODEL = 'users.CustomUser'
 

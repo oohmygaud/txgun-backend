@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from django.conf import settings
-from django.conf.urls import include, url
+from django.conf.urls import include
+from django.urls import path
 from django.conf.urls.static import static
 from django.contrib import admin
 from django.views.generic import TemplateView
@@ -42,10 +43,12 @@ class StatusPageView(View):
         return HttpResponse('<pre>'+json.dumps(data, indent=2))
 
 urlpatterns = [
-    url(r'^mgmt/', admin.site.urls),
-    url(r'^', include('apps.subscriptions.urls')),
-    url(r'^status', StatusPageView.as_view(), name='status'),
-    url(r'^$', HomePageView.as_view(), name='home'),
-    url(r'^dashboard', Dashboard.as_view(), name='dashboard')
+    path('mgmt/', admin.site.urls),
+    path('', include('apps.subscriptions.urls')),
+    path('status', StatusPageView.as_view(), name='status'),
+    path('dashboard', Dashboard.as_view(), name='dashboard'),
+    path('accounts/', include('rest_registration.api.urls')),
+    path('/', HomePageView.as_view(), name='home'),
+
 ]
 
