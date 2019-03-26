@@ -19,12 +19,19 @@ class Subscription(model_base.NicknamedBase):
     archived_at = models.DateTimeField(null=True, blank=True)
     watch_token_transfers = models.BooleanField(default=False)
     summary_notifications = models.BooleanField(default=False)
+    STATUS_CHOICES = [('active', 'active'), ('paused', 'paused')]
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='active')
 
     def found_transaction(self, tx):
         log.info('Found transaction: %s' % tx)
         if self.watch_token_transfers == False and tx['isToken']:
             log.debug(
                 'Its a token transaction and we arent watching tokens, skip')
+            return
+        
+        if self.status == 'paused':
+            log.debug(
+                'Subscription is paused, skipping transaction')
             return
 
         SubscribedTransaction.objects.create(
@@ -46,15 +53,15 @@ class Subscription(model_base.NicknamedBase):
             token_to=tx.get('tokenTo', '')
         )
 
-        if self.notify_url:
+        if self.notify_url and self.user.subtract_credit(
+                settings.NOTIFICATION_CREDIT_COST, 'Webhook Notification'):
             log.debug('Webhook TX Notification to %s' % self.notify_url)
             r = requests.post(self.notify_url, data=tx)
             log.debug('Webhook response: %s' % r.content)
-            self.user.api_credits.create(
-                amount=settings.NOTIFICATION_CREDIT_COST * -1,
-                description='Webhook Notification')
 
-        if self.notify_email:
+        
+        if self.notify_email and self.user.subtract_credit(
+                settings.NOTIFICATION_CREDIT_COST, 'Email Notification'):
             log.debug('Email TX Notification to %s' % self.notify_email)
             send_mail(
                 'Transaction Received',
@@ -63,9 +70,6 @@ class Subscription(model_base.NicknamedBase):
                 [self.notify_email],
                 fail_silently=False,
             )
-            self.user.api_credits.create(
-                amount=settings.NOTIFICATION_CREDIT_COST * -1,
-                description='Email Notification')
 
     class Meta:
         ordering = ('-created_at',)

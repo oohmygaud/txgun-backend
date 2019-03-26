@@ -57,6 +57,8 @@ class UserDetail(generics.RetrieveAPIView):
 
 class TransactionList(generics.ListAPIView):
     serializer_class = SubscribedTransactionSerializer
+    filter_backends = (filters.DjangoFilterBackend,)
+    filterset_fields = ('subscription',)
 
     def get_queryset(self):
         if not self.request.user.is_authenticated:

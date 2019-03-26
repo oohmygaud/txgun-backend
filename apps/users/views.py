@@ -34,7 +34,7 @@ class Dashboard(APIView):
             'token_amount__sum']
 
         return Response({
-            'active_subcriptions': my_subscriptions.count(),
+            'active_subscriptions': my_subscriptions.count(),
             'transactions_today': my_transactions_today.count(),
             'total_ether': total_ether or 0,
             'total_tokens': total_tokens or 0,

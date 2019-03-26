@@ -14,6 +14,7 @@ root = lambda *x: os.path.join(os.path.abspath(PROJECT_ROOT), *x)
 DEBUG = False
 DEVELOP = False
 SERVE_MEDIA = True
+USE_TZ = True
 
 # BELOW IS CONFUSING!
 # MEDIA_{ROOT,URL} -> User generated content
@@ -121,6 +122,7 @@ DEBUG_TOOLBAR_CONFIG = {
 
 ACCOUNT_OPEN_SIGNUP = False
 MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -130,3 +132,10 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'auditlog.middleware.AuditlogMiddleware',
 ]
+
+CORS_ORIGIN_ALLOW_ALL = False
+
+CORS_ORIGIN_WHITELIST = (
+    'localhost:8080',
+)
+CORS_ALLOW_CREDENTIALS = True

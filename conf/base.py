@@ -8,6 +8,9 @@ DEBUG=os.environ.get('is_zappa', '') != 'true'
 
 INSTALLED_APPS = [
     'django.contrib.auth',
+    'jet.dashboard',
+    'jet',
+    'corsheaders',
     'django.contrib.admin',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
@@ -15,6 +18,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'storages',
+    
     'django_s3_storage',
     'rest_framework',
     'rest_registration',
@@ -22,6 +26,7 @@ INSTALLED_APPS = [
 
     'django_filters',
     'django_extensions',
+    
     
     'apps.networks',
     'apps.subscriptions',
@@ -63,15 +68,16 @@ TEMPLATES = [
         'DIRS': [
             str(SITE_ROOT + '/templates'),
         ],
+        'APP_DIRS': True,
         'OPTIONS': {
             # See: https://docs.djangoproject.com/en/dev/ref/settings/#template-debug
             'debug': DEBUG,
             # See: https://docs.djangoproject.com/en/dev/ref/settings/#template-loaders
             # https://docs.djangoproject.com/en/dev/ref/templates/api/#loader-types
-            'loaders': [
-                'django.template.loaders.filesystem.Loader',
-                'django.template.loaders.app_directories.Loader',
-            ],
+            # 'loaders': [
+            #     'django.template.loaders.filesystem.Loader',
+            #     'django.template.loaders.app_directories.Loader',
+            # ],
             # See: https://docs.djangoproject.com/en/dev/ref/settings/#template-context-processors
             'context_processors': [
                 'django.template.context_processors.debug',
@@ -92,7 +98,8 @@ ALLOWED_HOSTS = ['txgun.io', '127.0.0.1', 'localhost', '*']
 
 REST_FRAMEWORK = {
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
-    'PAGE_SIZE': 10
+    'PAGE_SIZE': 10,
+    'DEFAULT_AUTHENTICATION_CLASSES': ('rest_framework_simplejwt.authentication.JWTAuthentication',)
 }
 
 if not DEBUG:
@@ -118,3 +125,5 @@ if not DEBUG:
 
 SIGNUP_BONUS_CREDITS = 1000
 NOTIFICATION_CREDIT_COST = 1
+
+APPEND_SLASH=True
