@@ -95,3 +95,6 @@ class SubscribedTransaction(models.Model):
     is_token = models.BooleanField()
     token_amount = models.DecimalField(max_digits=50, decimal_places=0)
     token_to = models.CharField(max_length=64)
+
+    class Meta:
+        ordering = ('-created_at',)

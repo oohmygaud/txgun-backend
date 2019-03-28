@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from .defaults import *
+from datetime import timedelta
 import environ
 
 env = environ.Env(DEBUG=(bool, False),) # set default values and casting
@@ -127,3 +128,9 @@ SIGNUP_BONUS_CREDITS = 1000
 NOTIFICATION_CREDIT_COST = 1
 
 APPEND_SLASH=True
+
+
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=30),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
+}
