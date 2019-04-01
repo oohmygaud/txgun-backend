@@ -19,7 +19,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'storages',
-    
+
     'django_s3_storage',
     'rest_framework',
     'rest_registration',
@@ -27,8 +27,8 @@ INSTALLED_APPS = [
 
     'django_filters',
     'django_extensions',
-    
-    
+
+
     'apps.networks',
     'apps.subscriptions',
     'apps.errors',
@@ -103,17 +103,17 @@ REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': ('rest_framework_simplejwt.authentication.JWTAuthentication',)
 }
 
+AWS_S3_BUCKET_NAME_STATIC = 'zappa-txgun-tritium-static'
+AWS_S3_CUSTOM_DOMAIN = '%s.s3.amazonaws.com' % AWS_S3_BUCKET_NAME_STATIC
+STATICFILES_STORAGE = 'storages.backends.s3boto.S3BotoStorage'
+STATICFILES_STORAGE = "django_s3_storage.storage.StaticS3Storage"
+
 if not DEBUG:
     AWS_REGION = "us-east-2"
     #AWS_ACCESS_KEY_ID = 'AKIAIACHQX4RGS2BAYAQ'
     #AWS_SECRET_ACCESS_KEY = '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'
 
-    AWS_S3_BUCKET_NAME_STATIC = 'zappa-txgun-tritium-static'
-    AWS_S3_CUSTOM_DOMAIN = '%s.s3.amazonaws.com' % AWS_S3_BUCKET_NAME_STATIC
     STATIC_URL = "https://%s/"%AWS_S3_CUSTOM_DOMAIN
-    STATICFILES_STORAGE = 'storages.backends.s3boto.S3BotoStorage'
-    STATICFILES_STORAGE = "django_s3_storage.storage.StaticS3Storage"
-
 
     EMAIL_BACKEND = 'django_ses.SESBackend'
 

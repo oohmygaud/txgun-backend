@@ -120,10 +120,10 @@ class Scanner(model_base.NicknamedBase):
 
     def process_block(self, block_number, save_transactions=False):
         transactions = list(self.network.driver.find_transactions(block_number))
-        
+
         scanlog.info('Processing block: %s @ %s - %s transactions'%(
             self.network, block_number, len(transactions)))
-        
+
         if save_transactions:
             import json
             fh = open('tests/transactions/block-%s.json'%block_number, 'w+')
@@ -147,6 +147,9 @@ class Scanner(model_base.NicknamedBase):
                     contract, _new = Contract.DISCOVERED_TOKEN(self.network, tx['to'])
                     if _new:
                         scanlog.info('Found a new token contract: %s'%tx['to'])
+
+    def __unicode__(self):
+        return '%s @ %s' % (str(self), self.latest_block)
 
     @classmethod
     def MAIN(cls):

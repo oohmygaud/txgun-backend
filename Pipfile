@@ -17,3 +17,8 @@ coincurve
 eth-keys
 pandoc
 ethereum
+django-filter
+django-rest-registration
+django-jet
+django-cors-headers
+djangorestframework_simplejwt

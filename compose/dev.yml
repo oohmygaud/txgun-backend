@@ -25,6 +25,7 @@ services:
       - ENV
       - SECRET_KEY
       - SERVICE=django_shell
+      -  DATABASE_URL=psql://tritium:qjCSc6Atc5EN6N2@txgun-tritium-beta.cnu1x1c3g09o.us-east-2.rds.amazonaws.com/tritium
     command: "bash"
     entrypoint: []
 
