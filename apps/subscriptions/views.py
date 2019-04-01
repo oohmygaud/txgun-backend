@@ -9,9 +9,11 @@ from rest_framework import generics
 from datetime import datetime
 from django_filters import rest_framework as filters
 from apps.users.models import CustomUser as User
+from rest_framework import viewsets
 
 
-class SubscriptionList(generics.ListCreateAPIView):
+class SubscriptionViewSet(viewsets.ModelViewSet):
+    model = Subscription
     serializer_class = SubscriptionSerializer
     filter_backends = (filters.DjangoFilterBackend,)
     filterset_fields = ('notify_email',
@@ -33,15 +35,6 @@ class SubscriptionList(generics.ListCreateAPIView):
             qs = qs.exclude(archived_at__lte=datetime.utcnow())
 
         return qs
-
-
-class SubscriptionDetail(generics.RetrieveUpdateDestroyAPIView):
-    serializer_class = SubscriptionSerializer
-
-    def get_queryset(self):
-        if not self.request.user.is_authenticated:
-            return Subscription.objects.none()
-        return Subscription.objects.filter(user=self.request.user)
 
 
 class UserList(generics.ListAPIView):
@@ -66,8 +59,3 @@ class TransactionList(generics.ListAPIView):
         return SubscribedTransaction.objects.filter(subscription__user=self.request.user)
 
 
-@api_view(['GET'])
-def api_root(request, format=None):
-    return Response({
-        'subscriptions': reverse('subscription-list', request=request, format=format)
-    })

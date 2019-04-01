@@ -10,8 +10,11 @@ from scripts.daily_summary import run as daily_summary
 import json
 import pytest
 import io
+import pytz
 from pprint import pprint
 
+def pytz_now():
+    return datetime.now(pytz.utc)
 
 @pytest.mark.django_db
 class SubscriptionTestCase(TestCase):
@@ -68,7 +71,8 @@ class SubscriptionTestCase(TestCase):
         self.assertEqual(len(mail.outbox), 2)
         self.assertEqual(mail.outbox[1].subject, 'Notification Summary')
 
-        two_days_ago = datetime.utcnow() - timedelta(days=2)
+        two_days_ago = pytz_now() - timedelta(days=2)
+    
         subscription.transactions.all().update(created_at=two_days_ago)
 
         daily_summary()
@@ -147,7 +151,7 @@ class SubscriptionTestCase(TestCase):
 
         Subscription.objects.create(
             watched_address = "0x4D468cf47eB6DF39618dc9450Be4B56A70A520c1",
-            archived_at=datetime.utcnow() - timedelta(hours=1),
+            archived_at=pytz_now() - timedelta(hours=1),
             user = user,
             watch_token_transfers = True
             

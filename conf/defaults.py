@@ -14,7 +14,7 @@ root = lambda *x: os.path.join(os.path.abspath(PROJECT_ROOT), *x)
 DEBUG = False
 DEVELOP = False
 SERVE_MEDIA = True
-USE_TZ = True
+USE_TZ = False
 
 # BELOW IS CONFUSING!
 # MEDIA_{ROOT,URL} -> User generated content

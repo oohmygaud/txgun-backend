@@ -86,7 +86,6 @@ class Scanner(model_base.NicknamedBase):
         from apps.subscriptions.models import Subscription
         watched_addresses = [s.watched_address for s in Subscription.objects.all()]
         cleaned = list(map(lambda s: s.lower().strip(), watched_addresses))
-        print('Watch addresses:', cleaned)
         return cleaned
 
     def in_watch_cache(self, tx):

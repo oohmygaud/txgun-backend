@@ -17,6 +17,7 @@ from rest_framework_simplejwt.views import (
     TokenObtainPairView,
     TokenRefreshView,
 )
+from conf import api
 
 
 
@@ -55,6 +56,7 @@ urlpatterns = [
     path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('mgmt/', admin.site.urls),
     path('', include('apps.subscriptions.urls')),
+    path('', include(api.router.urls)),
     path('status', StatusPageView.as_view(), name='status'),
     path('dashboard', Dashboard.as_view(), name='dashboard'),
     path('accounts/', include('rest_registration.api.urls')),

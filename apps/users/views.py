@@ -4,8 +4,8 @@ from rest_framework.response import Response
 from apps.subscriptions.models import Subscription, SubscribedTransaction
 from datetime import datetime, timedelta
 from django.db.models import Sum
-from apps.subscriptions.serializers import SubscribedTransactionSerializer, APICreditSerializer
-from apps.users.models import APICredit
+from apps.subscriptions.serializers import SubscribedTransactionSerializer, APICreditSerializer, APIKeySerializer
+from apps.users.models import APICredit, APIKey
 from rest_framework import generics
 
 # Create your views here.
@@ -61,4 +61,16 @@ class APICreditList(generics.ListAPIView):
         return APICredit.objects.filter(user=self.request.user)
 
 
+class APIKeyList(generics.ListCreateAPIView):
+    serializer_class = APIKeySerializer
+
+    def get(self, request, format=None):
+        if not self.request.user.is_authenticated:
+            return Response({'error': 'You are not logged in'}, status=401)
+
+    def get_queryset(self):
+        if not self.request.user.is_authenticated:
+            return APIKey.objects.none()
+        return APIKey.objects.filter(user=self.request.user)
+    
 
