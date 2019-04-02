@@ -5,7 +5,8 @@ from datetime import timedelta
 import environ
 
 env = environ.Env(DEBUG=(bool, False),) # set default values and casting
-DEBUG=os.environ.get('is_zappa', '') != 'true'
+ZAPPA=os.environ.get('is_zappa', '') == 'true'
+DEBUG=os.environ.get('DEBUG', '') != 'false' or not ZAPPA
 
 INSTALLED_APPS = [
     'django.contrib.auth',
@@ -107,6 +108,11 @@ AWS_S3_BUCKET_NAME_STATIC = 'zappa-txgun-tritium-static'
 AWS_S3_CUSTOM_DOMAIN = '%s.s3.amazonaws.com' % AWS_S3_BUCKET_NAME_STATIC
 STATICFILES_STORAGE = 'storages.backends.s3boto.S3BotoStorage'
 STATICFILES_STORAGE = "django_s3_storage.storage.StaticS3Storage"
+
+if ZAPPA:
+    BASE_URL="https://api.txgun.io"
+else:
+    BASE_URL="http://localhost:8000"
 
 if not DEBUG:
     AWS_REGION = "us-east-2"
