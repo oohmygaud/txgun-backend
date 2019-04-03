@@ -1,6 +1,5 @@
 from .models import Subscription, SubscribedTransaction
-from .serializers import SubscriptionSerializer, UserSerializer, SubscribedTransactionSerializer
-from .permissions import IsOwner
+from .serializers import SubscriptionSerializer, SubscribedTransactionSerializer
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework.reverse import reverse
@@ -8,7 +7,6 @@ from rest_framework import renderers
 from rest_framework import generics
 from datetime import datetime
 from django_filters import rest_framework as filters
-from apps.users.models import CustomUser as User
 from rest_framework import viewsets
 
 
@@ -37,18 +35,8 @@ class SubscriptionViewSet(viewsets.ModelViewSet):
         return qs
 
 
-class UserList(generics.ListAPIView):
-    permission_classes = (IsOwner,)
-    queryset = User.objects.all()
-    serializer_class = UserSerializer
-
-
-class UserDetail(generics.RetrieveAPIView):
-    permission_classes = (IsOwner,)
-    queryset = User.objects.all()
-    serializer_class = UserSerializer
-
-class TransactionList(generics.ListAPIView):
+class TransactionViewSet(viewsets.ReadOnlyModelViewSet):
+    model = SubscribedTransaction
     serializer_class = SubscribedTransactionSerializer
     filter_backends = (filters.DjangoFilterBackend,)
     filterset_fields = ('subscription',)
