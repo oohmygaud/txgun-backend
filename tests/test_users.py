@@ -36,7 +36,7 @@ class UserTestCase(TestCase):
 
         request = factory.get('/keys/')
         force_authenticate(request, user=test_user)
-        list_response = views.APIKeyList.as_view()(request)
+        list_response = views.APIKeyViewSet.as_view()(request)
         self.assertEqual([], list_response.data['results'])
 
         request = factory.post('/keys/', {
@@ -45,9 +45,9 @@ class UserTestCase(TestCase):
             'nickname': 'test api'
         })
         force_authenticate(request, user=test_user)
-        response = views.APIKeyList.as_view()(request)
+        response = views.APIKeyViewSet.as_view()(request)
 
         request = factory.get('/keys/')
         force_authenticate(request, user=test_user)
-        list_response= views.APIKeyList.as_view()(request)
+        list_response= views.APIKeyViewSet.as_view()(request)
         self.assertEqual(APIKey.objects.count(), 1)

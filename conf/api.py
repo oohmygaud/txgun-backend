@@ -9,5 +9,4 @@ router.register(r'users', UserViewSet, basename='user')
 router.register(r'api_credits', APICreditViewSet, basename='api_credit')
 router.register(r'api_keys', APIKeyViewSet, basename='api_key')
 
-print('URLS', router.urls)
 urlpatterns = router.urls

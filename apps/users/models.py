@@ -53,3 +53,4 @@ class APIKey(models.Model):
     key = models.CharField(max_length=32, default=makeKey)
     archived_at = models.DateTimeField(null=True, blank=True)
     nickname = models.CharField(max_length=64)
+    created_at = models.DateTimeField(auto_now_add=True)
