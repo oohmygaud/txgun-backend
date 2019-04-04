@@ -29,13 +29,14 @@ class SubscriptionViewSet(viewsets.ModelViewSet):
             return Subscription.objects.none()
         qs = Subscription.objects.filter(user=self.request.user)
 
-        if self.request.query_params.get('show_archived', '').lower() != 'true':
+        if self.action == 'list' and \
+            self.request.query_params.get('show_archived', '').lower() != 'true':
             qs = qs.exclude(archived_at__lte=datetime.utcnow())
 
         return qs
     
     @action(detail=True, methods=['post'])
-    def archive(self):
+    def archive(self, request, pk=None):
         instance = self.get_object()
         if not instance.archived_at:
             instance.archived_at = datetime.now(pytz.utc)
@@ -44,7 +45,7 @@ class SubscriptionViewSet(viewsets.ModelViewSet):
         return Response(self.serializer_class(instance).data)
     
     @action(detail=True, methods=['post'])
-    def unarchive(self):
+    def unarchive(self, request, pk=None):
         instance = self.get_object()
         instance.archived_at = None
         instance.save()
