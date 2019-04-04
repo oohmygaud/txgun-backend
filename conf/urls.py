@@ -11,8 +11,7 @@ import textwrap
 
 from django.http import HttpResponse
 from django.views.generic.base import View
-from apps.users.views import Dashboard, APICreditList, MyAPICredits
-from apps.subscriptions.views import TransactionList
+from apps.users.views import Dashboard, MyAPICredits
 from rest_framework_simplejwt.views import (
     TokenObtainPairView,
     TokenRefreshView,
@@ -55,15 +54,10 @@ urlpatterns = [
     path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('mgmt/', admin.site.urls),
-    path('', include('apps.subscriptions.urls')),
     path('', include(api.router.urls)),
-    path('status', StatusPageView.as_view(), name='status'),
     path('dashboard', Dashboard.as_view(), name='dashboard'),
     path('accounts/', include('rest_registration.api.urls')),
     path('api_balance', MyAPICredits.as_view(), name='api_balance'),
-    path('api_credit_statement', APICreditList.as_view(), name='api_credit_statement'),
-    path('transactions/', TransactionList.as_view(), name='transactions'),
-    
-    path('', HomePageView.as_view(), name='home'),
+
 ]
 

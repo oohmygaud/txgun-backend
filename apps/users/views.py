@@ -4,9 +4,16 @@ from rest_framework.response import Response
 from apps.subscriptions.models import Subscription, SubscribedTransaction
 from datetime import datetime, timedelta
 from django.db.models import Sum
-from apps.subscriptions.serializers import SubscribedTransactionSerializer, APICreditSerializer, APIKeySerializer
+from apps.subscriptions.serializers import (
+    SubscribedTransactionSerializer,
+    APICreditSerializer,
+    APIKeySerializer,
+    UserSerializer
+)
 from apps.users.models import APICredit, APIKey
-from rest_framework import generics
+from apps.users.models import CustomUser as User
+from rest_framework import viewsets
+from .permissions import IsOwner
 
 # Create your views here.
 
@@ -41,6 +48,14 @@ class Dashboard(APIView):
             'transactions': SubscribedTransactionSerializer(my_transactions[:10], many=True).data
         })
 
+
+class UserViewSet(viewsets.ReadOnlyModelViewSet):
+    model = User
+    permission_classes = (IsOwner,)
+    queryset = User.objects.all()
+    serializer_class = UserSerializer
+
+
 class MyAPICredits(APIView):
     def get(self, request, format=None):
         if not self.request.user.is_authenticated:
@@ -52,7 +67,8 @@ class MyAPICredits(APIView):
             'api_credit_balance': total_credits or 0
         })
 
-class APICreditList(generics.ListAPIView):
+class APICreditViewSet(viewsets.ModelViewSet):
+    model = APICredit
     serializer_class = APICreditSerializer
 
     def get_queryset(self):
@@ -61,7 +77,8 @@ class APICreditList(generics.ListAPIView):
         return APICredit.objects.filter(user=self.request.user)
 
 
-class APIKeyList(generics.ListCreateAPIView):
+class APIKeyViewSet(viewsets.ModelViewSet):
+    model = APIKey
     serializer_class = APIKeySerializer
 
     def get(self, request, format=None):

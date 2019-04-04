@@ -88,7 +88,7 @@ class SubscriptionTestCase(TestCase):
 
         request = factory.get('/subscriptions/')
         force_authenticate(request, user=user)
-        list_response = views.SubscriptionList.as_view()(request)
+        list_response = views.SubscriptionViewSet.as_view()(request)
         self.assertEqual([], list_response.data['results'])
 
         request = factory.post('/subscriptions/', {
@@ -99,11 +99,11 @@ class SubscriptionTestCase(TestCase):
             'watch_token_transfers': True
         })
         force_authenticate(request, user=user)
-        response = views.SubscriptionList.as_view()(request)     
+        response = views.SubscriptionViewSet.as_view()(request)     
 
         request = factory.get('/subscriptions/')
         force_authenticate(request, user=user)
-        list_response = views.SubscriptionList.as_view()(request)
+        list_response = views.SubscriptionViewSet.as_view()(request)
         self.assertEqual(1, list_response.data['count'])
 
         scanner = TEST_SCANNER()
@@ -134,12 +134,12 @@ class SubscriptionTestCase(TestCase):
 
         request = factory.get('/subscriptions/')
         force_authenticate(request, user=user1)
-        list_response = views.SubscriptionList.as_view()(request)
+        list_response = views.SubscriptionViewSet.as_view()(request)
         self.assertEqual(1, len(list_response.data['results']))
 
         request = factory.get('/subscriptions/')
         force_authenticate(request, user=user2)
-        list_response = views.SubscriptionList.as_view()(request)
+        list_response = views.SubscriptionViewSet.as_view()(request)
         self.assertEqual(0, len(list_response.data['results']))
 
     def test_subscription_api_archiving(self):
@@ -159,12 +159,12 @@ class SubscriptionTestCase(TestCase):
 
         request = factory.get('/subscriptions/?show_archived=true')
         force_authenticate(request, user=user)
-        list_response = views.SubscriptionList.as_view()(request)
+        list_response = views.SubscriptionViewSet.as_view()(request)
         self.assertEqual(1, len(list_response.data['results']))
 
         request = factory.get('/subscriptions/')
         force_authenticate(request, user=user)
-        list_response = views.SubscriptionList.as_view()(request)
+        list_response = views.SubscriptionViewSet.as_view()(request)
         self.assertEqual(0, len(list_response.data['results']))
 
     def test_subscription_watched_tokens(self):
