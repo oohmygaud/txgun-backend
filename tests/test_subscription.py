@@ -12,9 +12,12 @@ import pytest
 import io
 import pytz
 from pprint import pprint
+from apps.subscriptions import views
 
 def pytz_now():
     return datetime.now(pytz.utc)
+
+subscriptionView = views.SubscriptionViewSet.as_view({'get': 'list', 'post': 'create'})
 
 @pytest.mark.django_db
 class SubscriptionTestCase(TestCase):
@@ -80,15 +83,13 @@ class SubscriptionTestCase(TestCase):
 
 
     def test_subscription_api(self):
-        from apps.subscriptions import views
-
         # Setup factory and user
         factory = APIRequestFactory()
         user = User.objects.create_user(username='audrey', password='testing')
 
         request = factory.get('/subscriptions/')
         force_authenticate(request, user=user)
-        list_response = views.SubscriptionViewSet.as_view()(request)
+        list_response = subscriptionView(request)
         self.assertEqual([], list_response.data['results'])
 
         request = factory.post('/subscriptions/', {
@@ -99,11 +100,11 @@ class SubscriptionTestCase(TestCase):
             'watch_token_transfers': True
         })
         force_authenticate(request, user=user)
-        response = views.SubscriptionViewSet.as_view()(request)     
+        response = subscriptionView(request)     
 
         request = factory.get('/subscriptions/')
         force_authenticate(request, user=user)
-        list_response = views.SubscriptionViewSet.as_view()(request)
+        list_response = subscriptionView(request)
         self.assertEqual(1, list_response.data['count'])
 
         scanner = TEST_SCANNER()
@@ -118,8 +119,6 @@ class SubscriptionTestCase(TestCase):
         # print('https://webhook.site/#/cabfb6a8-714b-48b6-8138-78bda05fa9ff')
 
     def test_subscription_api_permissions(self):
-        from apps.subscriptions import views
-
         # Setup factory and user
         factory = APIRequestFactory()
         user1 = User.objects.create_user(username='audrey', password='testing')
@@ -134,17 +133,15 @@ class SubscriptionTestCase(TestCase):
 
         request = factory.get('/subscriptions/')
         force_authenticate(request, user=user1)
-        list_response = views.SubscriptionViewSet.as_view()(request)
+        list_response = subscriptionView(request)
         self.assertEqual(1, len(list_response.data['results']))
 
         request = factory.get('/subscriptions/')
         force_authenticate(request, user=user2)
-        list_response = views.SubscriptionViewSet.as_view()(request)
+        list_response = subscriptionView(request)
         self.assertEqual(0, len(list_response.data['results']))
 
     def test_subscription_api_archiving(self):
-        from apps.subscriptions import views
-
         # Setup factory and user
         factory = APIRequestFactory()
         user = User.objects.create_user(username='lee', password='testing')
@@ -159,12 +156,12 @@ class SubscriptionTestCase(TestCase):
 
         request = factory.get('/subscriptions/?show_archived=true')
         force_authenticate(request, user=user)
-        list_response = views.SubscriptionViewSet.as_view()(request)
+        list_response = subscriptionView(request)
         self.assertEqual(1, len(list_response.data['results']))
 
         request = factory.get('/subscriptions/')
         force_authenticate(request, user=user)
-        list_response = views.SubscriptionViewSet.as_view()(request)
+        list_response = subscriptionView(request)
         self.assertEqual(0, len(list_response.data['results']))
 
     def test_subscription_watched_tokens(self):

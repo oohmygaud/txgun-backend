@@ -19,6 +19,7 @@ class Subscription(model_base.NicknamedBase):
     archived_at = models.DateTimeField(null=True, blank=True)
     watch_token_transfers = models.BooleanField(default=False)
     summary_notifications = models.BooleanField(default=False)
+    include_pricing_data = models.BooleanField(default=False)
     STATUS_CHOICES = [('active', 'active'), ('paused', 'paused')]
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='active')
 

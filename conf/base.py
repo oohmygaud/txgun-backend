@@ -140,3 +140,5 @@ SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(minutes=5),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
 }
+
+CMC_API_KEY = 'a79b1aa0-36c0-45d1-980f-b951eb4382b1'

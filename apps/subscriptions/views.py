@@ -19,7 +19,8 @@ class SubscriptionViewSet(viewsets.ModelViewSet):
                         'notify_url',
                         'archived_at',
                         'watch_token_transfers',
-                        'summary_notifications')
+                        'summary_notifications',
+                        'include_pricing_data')
 
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
