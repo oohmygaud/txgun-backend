@@ -13,6 +13,16 @@ class UserSerializer(serializers.ModelSerializer):
         fields = ('username', 'email')
 
 class SubscribedTransactionSerializer(serializers.ModelSerializer):
+    pricing_info = serializers.SerializerMethodField()
+    def get_pricing_info(self, obj):
+        if not obj.price_lookup:
+            return {}
+        return {
+            'price': obj.get_price(),
+            'currency': obj.get_currency(),
+            'fiat': obj.get_fiat(),
+            'asset': obj.get_asset()
+        }
     class Meta:
         model = SubscribedTransaction
         fields = ('__all__')
