@@ -6,7 +6,6 @@ import json
 import requests
 import logging
 from django.conf import settings
-import decimal
 
 log = logging.getLogger('subscriptions')
 
@@ -25,7 +24,6 @@ class Subscription(model_base.NicknamedBase):
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='active')
 
     def found_transaction(self, tx):
-        from apps.contracts.models import PriceLookup
         log.info('Found transaction: %s' % tx)
         if self.watch_token_transfers == False and tx['isToken']:
             log.debug(
@@ -37,12 +35,14 @@ class Subscription(model_base.NicknamedBase):
                 'Subscription is paused, skipping transaction')
             return
 
-        price = self.include_pricing_data and PriceLookup.get_latest('ETH') or None
-
+        if SubscribedTransaction.objects.filter(tx_hash=tx['hash'], subscription=self):
+            log.debug('Already seen this transaction before, skipping')
+            return
+        
+        
 
         SubscribedTransaction.objects.create(
             subscription=self,
-            created_at=tx['datetime'],
             block_hash=tx['blockHash'],
             block_number=tx['blockNumber'],
             from_address=tx['from'],
@@ -57,8 +57,7 @@ class Subscription(model_base.NicknamedBase):
             has_data=tx['hasData'],
             is_token=tx['isToken'],
             token_amount=tx.get('tokenAmount', 0),
-            token_to=tx.get('tokenTo', ''),
-            price_lookup=price
+            token_to=tx.get('tokenTo', '')
         )
 
         if self.notify_url and self.user.subtract_credit(
@@ -85,7 +84,7 @@ class Subscription(model_base.NicknamedBase):
 
 class SubscribedTransaction(models.Model):
     objects = models.Manager()
-    created_at = models.DateTimeField()
+    created_at = models.DateTimeField(auto_now_add=True)
     subscription = models.ForeignKey(Subscription, on_delete=models.CASCADE,
                                      related_name='transactions')
     block_hash = models.TextField()
@@ -103,28 +102,6 @@ class SubscribedTransaction(models.Model):
     is_token = models.BooleanField()
     token_amount = models.DecimalField(max_digits=50, decimal_places=0)
     token_to = models.CharField(max_length=64)
-    price_lookup = models.ForeignKey("contracts.PriceLookup", on_delete=models.DO_NOTHING,
-                                      null=True, blank=True)
 
     class Meta:
         ordering = ('-created_at',)
-
-    def get_price(self):
-        if not self.price_lookup:
-            return None
-        return self.price_lookup.price
-
-    def get_currency(self):
-        if not self.price_lookup:
-            return None
-        return self.price_lookup.currency
-
-    def get_fiat(self):
-        if not self.price_lookup:
-            return None
-        return self.get_price() * self.value/decimal.Decimal(10E18)
-
-    def get_asset(self):
-        if not self.price_lookup:
-            return None
-        return self.price_lookup.asset
