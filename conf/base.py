@@ -115,12 +115,9 @@ if ZAPPA:
 else:
     BASE_URL="http://localhost:8000"
 
-if not DEBUG:
-    STATICFILES_STORAGE = 'storages.backends.s3boto.S3BotoStorage'
+if ZAPPA:
     STATICFILES_STORAGE = "django_s3_storage.storage.StaticS3Storage"
     AWS_REGION = "us-east-2"
-    #AWS_ACCESS_KEY_ID = 'AKIAIACHQX4RGS2BAYAQ'
-    #AWS_SECRET_ACCESS_KEY = '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'
 
     STATIC_URL = "https://%s/"%AWS_S3_CUSTOM_DOMAIN
 
@@ -131,7 +128,6 @@ if not DEBUG:
     AWS_SES_REGION_NAME = 'us-east-1'
     AWS_SES_REGION_ENDPOINT = 'email.us-east-1.amazonaws.com'
 
-# EMAIL_BACKEND='conf.test_settings.MockEmailBackend'
 
 SIGNUP_BONUS_CREDITS = 1000
 NOTIFICATION_CREDIT_COST = 1
