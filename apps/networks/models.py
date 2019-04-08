@@ -2,6 +2,8 @@ from django.db import models
 from .. import model_base
 from conf import eth
 from web3 import Web3, HTTPProvider
+from datetime import datetime
+import pytz
 import time
 import logging
 
@@ -27,9 +29,13 @@ class EthDriver(object):
             scanlog.warning('find_transactions: got a null block, retrying in 2 seconds...')
             time.sleep(2)
             return self.find_transactions(block_number, retry=False)
+        
+        at = datetime.fromtimestamp(block['timestamp'])
+        at = at.replace(tzinfo=pytz.utc)
 
         for rawtx in block.get('transactions', []):
             tx = dict(rawtx)
+            tx['datetime'] = at
             tx['hasData'] = 'input' in tx and tx['input'] != '0x'
             tx['isToken'] = False
             if tx['hasData'] and tx['input'].startswith('0xa9059cbb'):
