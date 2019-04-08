@@ -11,3 +11,4 @@ zappa_settings.json
 .idea
 airdrop.env
 .vscode
+static

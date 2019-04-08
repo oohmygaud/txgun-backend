@@ -101,7 +101,10 @@ ALLOWED_HOSTS = ['txgun.io', '127.0.0.1', 'localhost', '*']
 REST_FRAMEWORK = {
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 10,
-    'DEFAULT_AUTHENTICATION_CLASSES': ('rest_framework_simplejwt.authentication.JWTAuthentication',)
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+        'rest_framework.authentication.SessionAuthentication',
+        'apps.users.authentication.APIKeyAuthentication',)
 }
 
 AWS_S3_BUCKET_NAME_STATIC = 'zappa-txgun-tritium-static'
