@@ -39,10 +39,11 @@ INSTALLED_APPS = [
 ]
 
 REST_REGISTRATION = {
+    'REGISTER_VERIFICATION_ENABLED': False,
     'REGISTER_VERIFICATION_URL': 'https://txgun.io/verify-user/',
     'RESET_PASSWORD_VERIFICATION_URL': 'https://txgun.io/reset-password/',
     'REGISTER_EMAIL_VERIFICATION_URL': 'https://txgun.io/verify-email/',
-
+    'REGISTER_SERIALIZER_CLASS': 'apps.subscriptions.serializers.RegisterUserSerializer',
     'VERIFICATION_FROM_EMAIL': 'noreply@txgun.io',
 }
 
@@ -127,6 +128,8 @@ if ZAPPA:
     # you need to specify a region, like so:
     AWS_SES_REGION_NAME = 'us-east-1'
     AWS_SES_REGION_ENDPOINT = 'email.us-east-1.amazonaws.com'
+else:
+    EMAIL_BACKEND = 'django.core.mail.backends.locmem.EmailBackend'
 
 
 SIGNUP_BONUS_CREDITS = 1000

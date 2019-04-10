@@ -60,6 +60,8 @@ class Subscription(model_base.NicknamedBase):
             token_to=tx.get('tokenTo', ''),
             price_lookup=price
         )
+        
+        tx.pop('datetime', '') # not serializable
 
         if self.notify_url and self.user.subtract_credit(
                 settings.NOTIFICATION_CREDIT_COST, 'Webhook Notification'):
@@ -83,7 +85,7 @@ class Subscription(model_base.NicknamedBase):
         ordering = ('-created_at',)
 
 
-class SubscribedTransaction(models.Model):
+class SubscribedTransaction(model_base.RandomPKBase):
     objects = models.Manager()
     created_at = models.DateTimeField()
     subscription = models.ForeignKey(Subscription, on_delete=models.CASCADE,

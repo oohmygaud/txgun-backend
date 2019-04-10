@@ -3,6 +3,7 @@ from django.conf import settings
 from django.contrib.auth.models import AbstractUser
 from django.db.models import Sum
 from uuid import uuid4
+from .. import model_base
 
 # Create your models here.
 
@@ -33,7 +34,7 @@ class CustomUser(AbstractUser):
             return True
 
 
-class APICredit(models.Model):
+class APICredit(model_base.RandomPKBase):
     objects = models.Manager()
     user = models.ForeignKey(CustomUser, on_delete=models.CASCADE,
                              related_name='api_credits')
@@ -46,7 +47,7 @@ def makeKey():
     return str(uuid4()).replace('-', '')
 
 
-class APIKey(models.Model):
+class APIKey(model_base.RandomPKBase):
     objects = models.Manager()
     user = models.ForeignKey(CustomUser, on_delete=models.CASCADE,
                              related_name='api_keys')

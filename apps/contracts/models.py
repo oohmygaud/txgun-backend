@@ -23,7 +23,7 @@ class Contract(model_base.NicknamedBase):
         contract.interfaces.add(Interface.UNIQUE('evmTransfer'))
         return contract, _new
 
-class PriceLookup(models.Model):
+class PriceLookup(model_base.RandomPKBase):
     created_at = models.DateTimeField(auto_now_add=True)
     asset = models.CharField(max_length=16)
     currency = models.CharField(max_length=4, default='USD')

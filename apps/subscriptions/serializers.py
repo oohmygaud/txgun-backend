@@ -2,6 +2,8 @@ from .models import Subscription, SubscribedTransaction
 from apps.users.models import CustomUser as User, APICredit, APIKey
 from rest_framework import serializers
 
+from rest_registration.api.serializers import DefaultRegisterUserSerializer
+
 class SubscriptionSerializer(serializers.ModelSerializer):
     class Meta:
         model = Subscription
@@ -11,6 +13,9 @@ class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ('username', 'email')
+
+class RegisterUserSerializer(DefaultRegisterUserSerializer):
+    email = serializers.EmailField(required=True)
 
 class SubscribedTransactionSerializer(serializers.ModelSerializer):
     pricing_info = serializers.SerializerMethodField()
