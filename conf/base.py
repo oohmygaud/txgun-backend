@@ -144,3 +144,5 @@ SIMPLE_JWT = {
 }
 
 CMC_API_KEY = 'a79b1aa0-36c0-45d1-980f-b951eb4382b1'
+
+from .eth import *

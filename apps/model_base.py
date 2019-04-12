@@ -1,6 +1,15 @@
 from django.db import models
 import uuid
 
+def cutePk():
+    return str(uuid.uuid4())[-8:]
+
+class CutePKBase(models.Model):
+    id = models.CharField(max_length=8, primary_key=True, default=cutePk, editable=False)
+
+    class Meta:
+        abstract = True
+
 
 class RandomPKBase(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -9,7 +18,7 @@ class RandomPKBase(models.Model):
         abstract = True
 
 
-class NicknamedBase(RandomPKBase):
+class NicknamedBase(CutePKBase):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     nickname = models.CharField(max_length=255, null=True, blank=True)

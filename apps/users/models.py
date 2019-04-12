@@ -12,6 +12,7 @@ class CustomUser(AbstractUser):
     STATUS_CHOICES = [('active', 'active'), ('paused', 'paused')]
     status = models.CharField(
         max_length=10, choices=STATUS_CHOICES, default='active')
+    default_notify_url = models.CharField(max_length=2048, blank=True, null=True)
 
     def save(self, *args, **kwargs):
         super(CustomUser, self).save(*args, **kwargs)

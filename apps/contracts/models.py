@@ -1,5 +1,6 @@
 from .. import model_base
 from django.db import models
+import requests
 import pytz
 from datetime import datetime, timedelta
 from requests import Request, Session
@@ -16,12 +17,48 @@ class Contract(model_base.NicknamedBase):
     abi = models.TextField(null=True, blank=True)
     interfaces = models.ManyToManyField(Interface)
 
+    def get_etherscan_abi(self):
+        url = settings.ETHSCAN_URL + 'module=contract&action=getabi&address=' + self.address
+        response = requests.get(url)
+        self.abi = json.dumps(json.loads(response.content)['result'])
+        self.save()
+
+    def get_web3_contract(self):
+        if not self.abi:
+            self.get_etherscan_abi()
+        driver = settings.WEB3_DRIVERS['main']
+        return driver.eth.contract(address=self.address, abi=json.loads(self.abi))
+
+class ERC20(model_base.NicknamedBase):
+    symbol = models.CharField(max_length=64)
+    decimal_places = models.PositiveIntegerField()
+    contract = models.ForeignKey(Contract, on_delete=models.DO_NOTHING)
+
     @classmethod
     def DISCOVERED_TOKEN(cls, network, address):
-        contract, _new = cls.objects.get_or_create(
+        contract, _new = Contract.objects.get_or_create(
             network=network, address=address)
         contract.interfaces.add(Interface.UNIQUE('evmTransfer'))
-        return contract, _new
+        web3contract = contract.get_web3_contract()
+        name = web3contract.functions.name().call()
+        decimal_places = web3contract.functions.decimals().call()
+        symbol = web3contract.functions.symbol().call()
+        if not contract.nickname:
+            contract.nickname = name
+            contract.save()
+        try:
+            token, _new = cls.objects.get_or_create(
+                contract = contract,
+                defaults={'nickname': name, 'symbol': symbol, 'decimal_places': decimal_places}
+            )
+        except Exception as e:
+            token, _new = cls.objects.get_or_create(
+                contract = contract,
+                defaults={'nickname': 'Error importing token', 'symbol': 'ERROR', 'decimal_places': 0}
+            )
+            raise e
+
+        return token, _new
 
 class PriceLookup(model_base.RandomPKBase):
     created_at = models.DateTimeField(auto_now_add=True)
