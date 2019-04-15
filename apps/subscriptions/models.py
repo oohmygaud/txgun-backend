@@ -6,7 +6,7 @@ import json
 import requests
 import logging
 from django.conf import settings
-
+from decimal import Decimal
 log = logging.getLogger('subscriptions')
 
 
@@ -24,6 +24,7 @@ class Subscription(model_base.NicknamedBase):
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='active')
 
     def found_transaction(self, tx):
+        from apps.contracts.models import PriceLookup
         log.info('Found transaction: %s' % tx)
         if self.watch_token_transfers == False and tx['isToken']:
             log.debug(
@@ -43,6 +44,7 @@ class Subscription(model_base.NicknamedBase):
 
         SubscribedTransaction.objects.create(
             subscription=self,
+            created_at=tx['datetime'],
             block_hash=tx['blockHash'],
             block_number=tx['blockNumber'],
             from_address=tx['from'],
@@ -57,8 +59,11 @@ class Subscription(model_base.NicknamedBase):
             has_data=tx['hasData'],
             is_token=tx['isToken'],
             token_amount=tx.get('tokenAmount', 0),
-            token_to=tx.get('tokenTo', '')
+            token_to=tx.get('tokenTo', ''),
+            price_lookup=self.include_pricing_data and PriceLookup.get_latest('ETH') or None
         )
+        
+        tx.pop('datetime', '') # not serializable
 
         if self.notify_url and self.user.subtract_credit(
                 settings.NOTIFICATION_CREDIT_COST, 'Webhook Notification'):
@@ -82,9 +87,9 @@ class Subscription(model_base.NicknamedBase):
         ordering = ('-created_at',)
 
 
-class SubscribedTransaction(models.Model):
+class SubscribedTransaction(model_base.RandomPKBase):
     objects = models.Manager()
-    created_at = models.DateTimeField(auto_now_add=True)
+    created_at = models.DateTimeField()
     subscription = models.ForeignKey(Subscription, on_delete=models.CASCADE,
                                      related_name='transactions')
     block_hash = models.TextField()
@@ -102,6 +107,36 @@ class SubscribedTransaction(models.Model):
     is_token = models.BooleanField()
     token_amount = models.DecimalField(max_digits=50, decimal_places=0)
     token_to = models.CharField(max_length=64)
+    price_lookup = models.ForeignKey('contracts.PriceLookup',
+                null=True, blank=True, on_delete=models.DO_NOTHING)
+
+    def get_price(self):
+        if self.price_lookup:
+            return self.price_lookup.price
+
+    
+    def get_asset(self):
+        if self.price_lookup:
+            return self.price_lookup.asset
+    
+
+    def get_currency(self):
+        if self.price_lookup:
+            return self.price_lookup.currency
+
+    
+    def get_fiat(self):
+        if self.price_lookup and self.value:
+            return self.price_lookup.price * self.value/Decimal(10E18)
+
+    def get_token(self):
+        from apps.contracts.models import ERC20
+        if not self.is_token:
+            return None
+        try:
+            return ERC20.objects.get(contract__address=self.to_address)
+        except ERC20.DoesNotExist:
+            return None
 
     class Meta:
         ordering = ('-created_at',)

@@ -6,6 +6,7 @@ from datetime import datetime
 import pytz
 import time
 import logging
+import sys
 
 scanlog = logging.getLogger('scanner')
 
@@ -139,20 +140,35 @@ class Scanner(model_base.NicknamedBase):
 
     def process_transactions(self, transactions):
         from apps.subscriptions.models import Subscription
+        from apps.contracts.models import ERC20
         for tx in transactions:
             if self.in_watch_cache(tx):
                 scanlog.info('Found transaction: %s'%tx)
-                subscriptions = Subscription.objects.filter(
+                find_subscribers = (
                     models.Q(watched_address__iexact=tx['to']) |
                     models.Q(watched_address__iexact=tx['from'])
                 )
+                if(tx['isToken']):
+                    find_subscribers = (
+                        find_subscribers |
+                        models.Q(watched_address__iexact=tx['tokenTo'])
+                    )
+                subscriptions = Subscription.objects.filter(find_subscribers)
                 for subscription in subscriptions:
                     subscription.found_transaction(tx)
                 if tx.get('isToken'):
-                    from apps.contracts.models import Contract
-                    contract, _new = Contract.DISCOVERED_TOKEN(self.network, tx['to'])
-                    if _new:
-                        scanlog.info('Found a new token contract: %s'%tx['to'])
+                    try:
+                        contract, _new = ERC20.DISCOVERED_TOKEN(self.network, tx['to'])
+                        if _new:
+                            scanlog.info('Found a new token contract: %s'%tx['to'])
+                    except Exception as e:
+                        from apps.errors.models import ErrorLog
+                        ErrorLog.WARNING('Error importing token',
+                            str(e),
+                            transaction=tx['hash']
+                        )
+
+                        scanlog.error('Error importing token %s' % e)
 
     def __unicode__(self):
         return '%s @ %s' % (str(self), self.latest_block)
@@ -190,7 +206,7 @@ class Scanner(model_base.NicknamedBase):
 
         # Mail an admin if we run out of scanblock time
         scanlog.info('Ending blockscan [%s]: Out of time!'%elapsed)
-        raise Exception('Blockscan took more than %s seconds'%timeout)
+        sys.exit()
 
     def scan_tail(self, timeout):
         return self.block_scan(self.latest_block, timeout=timeout, update_latest=True)
@@ -200,7 +216,7 @@ def DEFAULT():
     return {
         'mainnet': Network.UNIQUE('Ethereum Mainnet',
             software=ether,
-            endpoint=eth.WEB3_INFURA['mainnet']
+            endpoint=eth.WEB3_INFURA['main']
         ),
         'ropsten': Network.UNIQUE('Ethereum Ropsten',
             software=ether,

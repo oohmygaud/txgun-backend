@@ -3,6 +3,7 @@ from django.conf import settings
 from django.contrib.auth.models import AbstractUser
 from django.db.models import Sum
 from uuid import uuid4
+from .. import model_base
 
 # Create your models here.
 
@@ -11,6 +12,7 @@ class CustomUser(AbstractUser):
     STATUS_CHOICES = [('active', 'active'), ('paused', 'paused')]
     status = models.CharField(
         max_length=10, choices=STATUS_CHOICES, default='active')
+    default_notify_url = models.CharField(max_length=2048, blank=True, null=True)
 
     def save(self, *args, **kwargs):
         super(CustomUser, self).save(*args, **kwargs)
@@ -33,7 +35,7 @@ class CustomUser(AbstractUser):
             return True
 
 
-class APICredit(models.Model):
+class APICredit(model_base.RandomPKBase):
     objects = models.Manager()
     user = models.ForeignKey(CustomUser, on_delete=models.CASCADE,
                              related_name='api_credits')
@@ -46,7 +48,7 @@ def makeKey():
     return str(uuid4()).replace('-', '')
 
 
-class APIKey(models.Model):
+class APIKey(model_base.RandomPKBase):
     objects = models.Manager()
     user = models.ForeignKey(CustomUser, on_delete=models.CASCADE,
                              related_name='api_keys')
