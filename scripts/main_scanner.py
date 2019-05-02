@@ -7,4 +7,4 @@ def run():
     scanlog.info('Starting up Main Scanner Script')
     from apps.networks.models import Scanner
     scanner = Scanner.MAIN()
-    scanner.scan_tail(timeout=60)
+    scanner.scan_tail(timeout=50)
