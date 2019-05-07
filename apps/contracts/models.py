@@ -52,6 +52,9 @@ class ERC20(model_base.NicknamedBase):
     def DISCOVERED_TOKEN(cls, network, address):
         contract, _new = Contract.objects.get_or_create(
             network=network, address=address)
+        if not _new:
+            return None, _new
+
         contract.interfaces.add(Interface.UNIQUE('evmTransfer'))
         web3contract = contract.get_web3_contract()
         name = web3contract.functions.name().call()

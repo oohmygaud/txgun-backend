@@ -2,7 +2,8 @@ from django.db import models
 from .. import model_base
 from conf import eth
 from web3 import Web3, HTTPProvider
-from datetime import datetime
+from datetime import datetime, timedelta
+import random
 import pytz
 import time
 import logging
@@ -30,7 +31,7 @@ class EthDriver(object):
             scanlog.warning('find_transactions: got a null block, retrying in 2 seconds...')
             time.sleep(2)
             return self.find_transactions(block_number, retry=False)
-        
+
         at = datetime.fromtimestamp(block['timestamp'])
         at = at.replace(tzinfo=pytz.utc)
 
@@ -87,6 +88,7 @@ class Network(model_base.NicknamedBase):
 class Scanner(model_base.NicknamedBase):
     network = models.ForeignKey(Network, on_delete=models.DO_NOTHING)
     latest_block = models.PositiveIntegerField(default=0)
+    locked_thread_time = models.DateTimeField(null=True, blank=True)
 
     def get_watched_addresses(self):
         # TODO: IF LENGTH OF WATCHED > 2000 MAIL ADMINS
@@ -104,6 +106,23 @@ class Scanner(model_base.NicknamedBase):
         frm = get('from')
         tkto = get('tokenTo')
         return to in self.watched_cache or frm in self.watched_cache or tkto in self.watched_cache
+
+    def get_available_lock(self):
+        now = datetime.now(pytz.utc)
+        if self.locked_thread_time:
+            unlock_time = self.locked_thread_time + timedelta(seconds=90)
+            if unlock_time <= now:
+                self.release_lock()
+            else: return False
+
+        self.locked_thread_time = now
+        self.save()
+        return True
+    
+    def release_lock(self):
+        scanlog.debug('Releasing scanner lock...')
+        self.locked_thread_time = None
+        self.save()
 
     @property
     def watched_cache(self):
@@ -142,8 +161,10 @@ class Scanner(model_base.NicknamedBase):
         from apps.subscriptions.models import Subscription
         from apps.contracts.models import ERC20
         for tx in transactions:
+            start = time.time()
+            elapsed = lambda: time.time() - start
             if self.in_watch_cache(tx):
-                scanlog.info('Found transaction: %s'%tx)
+                scanlog.debug('Found transaction: %s'%tx)
                 find_subscribers = (
                     models.Q(watched_address__iexact=tx['to']) |
                     models.Q(watched_address__iexact=tx['from'])
@@ -156,19 +177,20 @@ class Scanner(model_base.NicknamedBase):
                 subscriptions = Subscription.objects.filter(find_subscribers)
                 for subscription in subscriptions:
                     subscription.found_transaction(tx)
+                scanlog.debug('TIME_FOUND_SUBSCRIPTIONS %s' % elapsed())
                 if tx.get('isToken'):
                     try:
-                        contract, _new = ERC20.DISCOVERED_TOKEN(self.network, tx['to'])
-                        if _new:
-                            scanlog.info('Found a new token contract: %s'%tx['to'])
+                        ERC20.DISCOVERED_TOKEN(self.network, tx['to'])
+                        scanlog.debug('TIME_FOUND_TOKEN %s' % elapsed())
                     except Exception as e:
                         from apps.errors.models import ErrorLog
                         ErrorLog.WARNING('Error importing token',
                             str(e),
                             transaction=tx['hash']
                         )
-
+                        scanlog.debug('TIME_TOKEN_ERROR %s' % elapsed())
                         scanlog.error('Error importing token %s' % e)
+                scanlog.debug('TIME_TX_END %s' % elapsed())
 
     def __unicode__(self):
         return '%s @ %s' % (str(self), self.latest_block)
@@ -181,17 +203,24 @@ class Scanner(model_base.NicknamedBase):
         return TEST_SCANNER()
 
     def block_scan(self, start_block, end_block=None, timeout=10, update_latest=False):
-        scanlog.info('Starting blockscan: %s'%self.network)
+        thread_number = int(random.random() * 10000)
+        if not self.get_available_lock():
+            scanlog.info('Duplicate blockscan, exiting: %s#%s'%(self.network, thread_number))
+            return
+        
+        scanlog.info('Starting blockscan: %s#%s'%(self.network, thread_number))
         start = time.time()
         end = start + timeout
         next_block = start_block
         while time.time() < end:
             elapsed = time.time() - start
             if next_block > self.network.current_block():
-                scanlog.info('Ending blockscan [%s]: No more blocks!'%elapsed)
+                scanlog.info('Ending blockscan#%s [%s]: No more blocks!'%(thread_number, elapsed))
+                self.release_lock()
                 return
             if end_block and next_block > end_block:
-                scanlog.info('Ending blockscan [%s]: Reached endblock!'%elapsed)
+                scanlog.info('Ending blockscan#%s [%s]: Reached endblock!'%(thread_number, elapsed))
+                self.release_lock()
                 return
 
             self.process_block(next_block)
@@ -205,7 +234,8 @@ class Scanner(model_base.NicknamedBase):
         elapsed = time.time() - start
 
         # Mail an admin if we run out of scanblock time
-        scanlog.info('Ending blockscan [%s]: Out of time!'%elapsed)
+        scanlog.info('Ending blockscan#%s [%s]: Out of time!'%(thread_number, elapsed))
+        self.release_lock()
         sys.exit()
 
     def scan_tail(self, timeout):

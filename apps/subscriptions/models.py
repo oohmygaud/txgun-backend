@@ -42,6 +42,9 @@ class Subscription(model_base.NicknamedBase):
             return
         
         
+        if not 'datetime' in tx:
+            log.error('WHAT THE HELL GUY, NO DATETIME')
+            return
 
         SubscribedTransaction.objects.create(
             subscription=self,
