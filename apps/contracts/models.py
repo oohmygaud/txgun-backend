@@ -8,19 +8,32 @@ from django.conf import settings
 from requests.exceptions import ConnectionError, Timeout, TooManyRedirects
 import json
 
+
 class Interface(model_base.NicknamedBase):
     abi = models.TextField(null=True, blank=True)
 
+
+def get_etherscan_abi(address):
+    url = settings.ETHSCAN_URL + 'module=contract&action=getabi&address=' + address
+    response = requests.get(url)
+    return json.loads(response.content)['result']
+
+
 class Contract(model_base.NicknamedBase):
-    network = models.ForeignKey('networks.Network', on_delete=models.DO_NOTHING)
+    network = models.ForeignKey(
+        'networks.Network', on_delete=models.DO_NOTHING)
     address = models.CharField(max_length=255)
     abi = models.TextField(null=True, blank=True)
     interfaces = models.ManyToManyField(Interface)
 
+    def abi_object(self):
+        try:
+            return json.loads(json.loads(self.abi))
+        except:
+            return json.loads(self.abi)
+
     def get_etherscan_abi(self):
-        url = settings.ETHSCAN_URL + 'module=contract&action=getabi&address=' + self.address
-        response = requests.get(url)
-        self.abi = json.dumps(json.loads(response.content)['result'])
+        self.abi = json.dumps(get_etherscan_abi(self.address))
         self.save()
 
     def get_web3_contract(self):
@@ -28,6 +41,7 @@ class Contract(model_base.NicknamedBase):
             self.get_etherscan_abi()
         driver = settings.WEB3_DRIVERS['main']
         return driver.eth.contract(address=self.address, abi=json.loads(self.abi))
+
 
 class ERC20(model_base.NicknamedBase):
     symbol = models.CharField(max_length=64)
@@ -48,17 +62,20 @@ class ERC20(model_base.NicknamedBase):
             contract.save()
         try:
             token, _new = cls.objects.get_or_create(
-                contract = contract,
-                defaults={'nickname': name, 'symbol': symbol, 'decimal_places': decimal_places}
+                contract=contract,
+                defaults={'nickname': name, 'symbol': symbol,
+                          'decimal_places': decimal_places}
             )
         except Exception as e:
             token, _new = cls.objects.get_or_create(
-                contract = contract,
-                defaults={'nickname': 'Error importing token', 'symbol': 'ERROR', 'decimal_places': 0}
+                contract=contract,
+                defaults={'nickname': 'Error importing token',
+                          'symbol': 'ERROR', 'decimal_places': 0}
             )
             raise e
 
         return token, _new
+
 
 class PriceLookup(model_base.RandomPKBase):
     created_at = models.DateTimeField(auto_now_add=True)
@@ -67,7 +84,7 @@ class PriceLookup(model_base.RandomPKBase):
     price = models.DecimalField(max_digits=20, decimal_places=10)
 
     def __str__(self):
-        return '%s: 1%s = %s%s'%(
+        return '%s: 1%s = %s%s' % (
             self.created_at,
             self.asset,
             self.price,
@@ -104,4 +121,3 @@ class PriceLookup(model_base.RandomPKBase):
                 return data['data'][asset]['quote'][currency]['price']
             except (ConnectionError, Timeout, TooManyRedirects) as e:
                 print(e)
-

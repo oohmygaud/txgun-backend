@@ -19,6 +19,7 @@ class SubscriptionViewSet(viewsets.ModelViewSet):
                         'notify_url',
                         'archived_at',
                         'watch_token_transfers',
+                        'specific_contract_calls',
                         'summary_notifications',
                         'include_pricing_data')
 

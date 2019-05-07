@@ -11,6 +11,7 @@ import textwrap
 
 from django.http import HttpResponse
 from django.views.generic.base import View
+from apps.contracts.views import GetABI
 from apps.users.views import Dashboard, MyAPICredits
 from rest_framework_simplejwt.views import (
     TokenObtainPairView,
@@ -56,6 +57,7 @@ urlpatterns = [
     path('mgmt/', admin.site.urls),
     path('', include(api.router.urls)),
     path('dashboard', Dashboard.as_view(), name='dashboard'),
+    path('get_abi', GetABI.as_view(), name='get_abi'),
     path('accounts/', include('rest_registration.api.urls')),
     path('api_balance', MyAPICredits.as_view(), name='api_balance'),
 
