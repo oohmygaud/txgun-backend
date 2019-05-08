@@ -14,6 +14,8 @@ from apps.users.models import APICredit, APIKey
 from apps.users.models import CustomUser as User
 from rest_framework import viewsets
 from .permissions import IsOwner
+from django.utils import timezone
+
 
 # Create your views here.
 
@@ -24,12 +26,12 @@ class Dashboard(APIView):
             return Response({'error': 'You are not logged in'}, status=401)
 
         my_subscriptions = Subscription.objects.filter(
-            user=self.request.user).exclude(archived_at__lte=datetime.utcnow())
+            user=self.request.user).exclude(archived_at__lte=timezone.now())
 
         my_transactions = SubscribedTransaction.objects.filter(
             subscription__user=self.request.user)
 
-        yesterday = datetime.utcnow() - timedelta(days=1)
+        yesterday = timezone.now() - timedelta(days=1)
 
         my_transactions_today = my_transactions.filter(
             created_at__gte=yesterday)

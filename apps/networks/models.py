@@ -3,6 +3,7 @@ from .. import model_base
 from conf import eth
 from web3 import Web3, HTTPProvider
 from datetime import datetime, timedelta
+from django.utils import timezone
 import random
 import pytz
 import time
@@ -33,7 +34,7 @@ class EthDriver(object):
             return self.find_transactions(block_number, retry=False)
 
         at = datetime.fromtimestamp(block['timestamp'])
-        at = at.replace(tzinfo=pytz.utc)
+        at = at.replace(tzinfo=pytz.utc).isoformat()
 
         for rawtx in block.get('transactions', []):
             tx = dict(rawtx)
@@ -108,7 +109,7 @@ class Scanner(model_base.NicknamedBase):
         return to in self.watched_cache or frm in self.watched_cache or tkto in self.watched_cache
 
     def get_available_lock(self):
-        now = datetime.now(pytz.utc)
+        now = timezone.now()
         if self.locked_thread_time:
             unlock_time = self.locked_thread_time + timedelta(seconds=90)
             if unlock_time <= now:
@@ -161,8 +162,6 @@ class Scanner(model_base.NicknamedBase):
         from apps.subscriptions.models import Subscription
         from apps.contracts.models import ERC20
         for tx in transactions:
-            start = time.time()
-            elapsed = lambda: time.time() - start
             if self.in_watch_cache(tx):
                 scanlog.debug('Found transaction: %s'%tx)
                 find_subscribers = (
@@ -177,20 +176,16 @@ class Scanner(model_base.NicknamedBase):
                 subscriptions = Subscription.objects.filter(find_subscribers)
                 for subscription in subscriptions:
                     subscription.found_transaction(tx)
-                scanlog.debug('TIME_FOUND_SUBSCRIPTIONS %s' % elapsed())
                 if tx.get('isToken'):
                     try:
                         ERC20.DISCOVERED_TOKEN(self.network, tx['to'])
-                        scanlog.debug('TIME_FOUND_TOKEN %s' % elapsed())
                     except Exception as e:
                         from apps.errors.models import ErrorLog
                         ErrorLog.WARNING('Error importing token',
                             str(e),
                             transaction=tx['hash']
                         )
-                        scanlog.debug('TIME_TOKEN_ERROR %s' % elapsed())
                         scanlog.error('Error importing token %s' % e)
-                scanlog.debug('TIME_TX_END %s' % elapsed())
 
     def __unicode__(self):
         return '%s @ %s' % (str(self), self.latest_block)
@@ -202,7 +197,7 @@ class Scanner(model_base.NicknamedBase):
     def TEST(cls):
         return TEST_SCANNER()
 
-    def block_scan(self, start_block, end_block=None, timeout=10, update_latest=False):
+    def block_scan(self, start_block, end_block=None, timeout=10, update_latest=False, save_transactions=False):
         thread_number = int(random.random() * 10000)
         if not self.get_available_lock():
             scanlog.info('Duplicate blockscan, exiting: %s#%s'%(self.network, thread_number))
@@ -223,7 +218,7 @@ class Scanner(model_base.NicknamedBase):
                 self.release_lock()
                 return
 
-            self.process_block(next_block)
+            self.process_block(next_block, save_transactions=save_transactions)
 
             if update_latest:
                 self.latest_block = next_block

@@ -7,8 +7,9 @@ import requests
 import logging
 from django.conf import settings
 from decimal import Decimal
-log = logging.getLogger('subscriptions')
 
+log = logging.getLogger('subscriptions')
+log.setLevel(logging.DEBUG)
 
 class Subscription(model_base.NicknamedBase):
     objects = models.Manager()
@@ -21,20 +22,31 @@ class Subscription(model_base.NicknamedBase):
     summary_notifications = models.BooleanField(default=False)
     include_pricing_data = models.BooleanField(default=False)
     specific_contract_calls = models.BooleanField(default=False)
+    abi_methods = models.TextField(null=True, blank=True)
     STATUS_CHOICES = [('active', 'active'), ('paused', 'paused')]
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='active')
 
     def found_transaction(self, tx):
-        from apps.contracts.models import PriceLookup
+        from apps.contracts.models import PriceLookup, Contract
         log.info('Found transaction: %s' % tx)
-        if self.watch_token_transfers == False and tx['isToken']:
-            log.debug(
-                'Its a token transaction and we arent watching tokens, skip')
-            return
+
         
         if self.status == 'paused':
             log.debug(
                 'Subscription is paused, skipping transaction')
+            return
+
+        if tx['hasData'] and self.specific_contract_calls:
+            contract = Contract.LOOKUP(tx['to'])
+            print(tx['input'][:10], contract.abi)
+            function = contract.get_web3_contract().get_function_by_selector(tx['input'][:10])
+            if function.fn_name not in self.abi_methods.split(','):
+                log.debug('Not watching this function: %s'%function.fn_name)
+                return
+        
+        elif self.watch_token_transfers == False and tx['isToken']:
+            log.debug(
+                'Its a token transaction and we arent watching tokens, skip')
             return
 
         if SubscribedTransaction.objects.filter(tx_hash=tx['hash'], subscription=self):

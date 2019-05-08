@@ -12,7 +12,7 @@ django-ses
 django-s3-storage==0.12.4
 gql
 psycopg2-binary
-web3==4.0.0b11
+web3>=4.9.2
 coincurve
 eth-keys
 pandoc

@@ -2,10 +2,12 @@ from .. import model_base
 from django.db import models
 import requests
 import pytz
+from web3 import Web3
 from datetime import datetime, timedelta
 from requests import Request, Session
 from django.conf import settings
 from requests.exceptions import ConnectionError, Timeout, TooManyRedirects
+from django.utils import timezone
 import json
 
 
@@ -26,6 +28,26 @@ class Contract(model_base.NicknamedBase):
     abi = models.TextField(null=True, blank=True)
     interfaces = models.ManyToManyField(Interface)
 
+    @classmethod
+    def LOOKUP(cls, address, network='mainnet'):
+        from apps.networks.models import DEFAULT
+        if isinstance(network, str):
+            network = DEFAULT()[network]
+        
+        find = cls.objects.filter(network=network, address__iexact=address)
+        if find.count():
+            result = find.first()
+        else:
+            result = cls.objects.create(address=address, network=network)
+            result.get_etherscan_abi()
+        try:
+            result.address = Web3.toChecksumAddress(address)
+            result.save()
+        except ValueError as e:
+            pass
+
+        return result
+
     def abi_object(self):
         try:
             return json.loads(json.loads(self.abi))
@@ -40,7 +62,7 @@ class Contract(model_base.NicknamedBase):
         if not self.abi:
             self.get_etherscan_abi()
         driver = settings.WEB3_DRIVERS['main']
-        return driver.eth.contract(address=self.address, abi=json.loads(self.abi))
+        return driver.eth.contract(address=self.address, abi=self.abi_object())
 
 
 class ERC20(model_base.NicknamedBase):
@@ -56,10 +78,19 @@ class ERC20(model_base.NicknamedBase):
             return None, _new
 
         contract.interfaces.add(Interface.UNIQUE('evmTransfer'))
-        web3contract = contract.get_web3_contract()
-        name = web3contract.functions.name().call()
-        decimal_places = web3contract.functions.decimals().call()
-        symbol = web3contract.functions.symbol().call()
+        try:
+            web3contract = contract.get_web3_contract()
+            name = web3contract.functions.name().call()
+            decimal_places = web3contract.functions.decimals().call()
+            symbol = web3contract.functions.symbol().call()
+        except Exception as e:
+            token, _new = cls.objects.get_or_create(
+                contract=contract,
+                defaults={'nickname': 'Error importing token: %s'%e,
+                          'symbol': 'ERROR', 'decimal_places': 0}
+            )
+            raise e
+
         if not contract.nickname:
             contract.nickname = name
             contract.save()
@@ -72,7 +103,7 @@ class ERC20(model_base.NicknamedBase):
         except Exception as e:
             token, _new = cls.objects.get_or_create(
                 contract=contract,
-                defaults={'nickname': 'Error importing token',
+                defaults={'nickname': 'Error importing token: %s'%e,
                           'symbol': 'ERROR', 'decimal_places': 0}
             )
             raise e
@@ -97,7 +128,7 @@ class PriceLookup(model_base.RandomPKBase):
     @classmethod
     def get_latest(cls, asset, currency='USD'):
         try:
-            recent = datetime.now(pytz.utc)-timedelta(minutes=10)
+            recent = timezone.now()-timedelta(minutes=10)
             return cls.objects.get(asset=asset, created_at__gte=recent)
         except cls.DoesNotExist:
             return cls.objects.create(asset=asset, price=cls.do_lookup(asset, currency))

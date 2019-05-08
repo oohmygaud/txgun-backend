@@ -9,6 +9,7 @@ from datetime import datetime
 from django_filters import rest_framework as filters
 from rest_framework import viewsets
 import pytz
+from django.utils import timezone
 
 class SubscriptionViewSet(viewsets.ModelViewSet):
     model = Subscription
@@ -33,7 +34,7 @@ class SubscriptionViewSet(viewsets.ModelViewSet):
 
         if self.action == 'list' and \
             self.request.query_params.get('show_archived', '').lower() != 'true':
-            qs = qs.exclude(archived_at__lte=datetime.utcnow())
+            qs = qs.exclude(archived_at__lte=timezone.now())
 
         return qs
     
@@ -41,7 +42,7 @@ class SubscriptionViewSet(viewsets.ModelViewSet):
     def archive(self, request, pk=None):
         instance = self.get_object()
         if not instance.archived_at:
-            instance.archived_at = datetime.now(pytz.utc)
+            instance.archived_at = timezone.now()
         instance.status = 'paused'
         instance.save()
         return Response(self.serializer_class(instance).data)

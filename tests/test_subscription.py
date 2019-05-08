@@ -13,9 +13,10 @@ import io
 import pytz
 from pprint import pprint
 from apps.subscriptions import views
+from django.utils import timezone
 
 def pytz_now():
-    return datetime.now(pytz.utc)
+    return timezone.now()
 
 subscriptionView = views.SubscriptionViewSet.as_view({'get': 'list', 'post': 'create'})
 
@@ -69,12 +70,15 @@ class SubscriptionTestCase(TestCase):
 
         # then process the transactions
         scanner.process_transactions(tx_list)
+        today = pytz_now()
+    
+        subscription.transactions.all().update(created_at=today)
 
         daily_summary()
         self.assertEqual(len(mail.outbox), 2)
         self.assertEqual(mail.outbox[1].subject, 'Notification Summary')
 
-        two_days_ago = pytz_now() - timedelta(days=2)
+        two_days_ago = today - timedelta(days=2)
     
         subscription.transactions.all().update(created_at=two_days_ago)
 
@@ -210,3 +214,22 @@ class SubscriptionTestCase(TestCase):
         self.assertEqual(2, test_user.api_credits.count())
         self.assertEqual(999, test_user.current_credit_balance())
 
+    def test_abi_methods(self):
+        test_user = User.objects.create_user(username="audrey", email="test@audrey.com", password="audrey")
+        
+        # Create a subscription
+        subscription = Subscription.objects.create(
+            notify_email = test_user.email,
+            watched_address = "0x86Fa049857E0209aa7D9e616F7eb3b3B78ECfdb0",
+            user = test_user,
+            watch_token_transfers = False,
+            specific_contract_calls = True,
+            abi_methods = 'transfer'
+        )
+
+        scanner = TEST_SCANNER()
+        tx_list = json.load(open('tests/transactions/block-5000015.json'))
+        scanner.process_transactions(tx_list)
+
+        self.assertEqual(4, subscription.transactions.count())
+        
