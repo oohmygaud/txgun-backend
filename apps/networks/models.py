@@ -76,6 +76,10 @@ class Software(model_base.NicknamedBase):
 class Network(model_base.NicknamedBase):
     software = models.ForeignKey(Software, on_delete=models.DO_NOTHING)
     endpoint = models.TextField()
+    
+    @classmethod
+    def MAIN(cls):
+        return MAIN_NETWORK()
 
     @property
     def driver(self):
