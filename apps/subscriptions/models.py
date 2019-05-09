@@ -30,7 +30,8 @@ class Subscription(model_base.NicknamedBase):
 
     def found_transaction(self, tx):
         from apps.contracts.models import PriceLookup, Contract
-        log.info('Found transaction: %s' % tx)
+        #Too noisy, getting expensive
+        #log.info('Found transaction: %s' % tx)
 
         
         if self.status == 'paused':

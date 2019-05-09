@@ -12,6 +12,7 @@ import sys
 
 scanlog = logging.getLogger('scanner')
 
+
 class EthDriver(object):
     def __init__(self, endpoint):
         self.web3 = Web3(HTTPProvider(endpoint))
@@ -23,13 +24,14 @@ class EthDriver(object):
         return self.web3.eth.getBlock(block_number, full_transactions=True)
 
     def find_transactions(self, block_number, retry=True):
-        scanlog.debug('find_transactions: block=%s'%block_number)
+        scanlog.debug('find_transactions: block=%s' % block_number)
         block = self.get_block(block_number)
 
         # Been some odd errors where block is None...
         # My best guess is that it's the head block
         if not block and retry:
-            scanlog.warning('find_transactions: got a null block, retrying in 2 seconds...')
+            scanlog.warning(
+                'find_transactions: got a null block, retrying in 2 seconds...')
             time.sleep(2)
             return self.find_transactions(block_number, retry=False)
 
@@ -44,7 +46,7 @@ class EthDriver(object):
             if tx['hasData'] and tx['input'].startswith('0xa9059cbb'):
                 tx['isToken'] = True
                 tx['tokenAmount'] = Web3.toInt(hexstr=tx['input'][-32:])
-                START_BYTE = 2 + 8 + (64 - 40) # 0x a9059cbb [24 0s] [address]
+                START_BYTE = 2 + 8 + (64 - 40)  # 0x a9059cbb [24 0s] [address]
                 address = '0x' + tx['input'][START_BYTE:START_BYTE+40]
                 try:
                     tx['tokenTo'] = Web3.toChecksumAddress(address)
@@ -52,7 +54,7 @@ class EthDriver(object):
                     from apps.errors.models import ErrorLog
                     ErrorLog.objects.create(
                         nickname="Missing or corrupt input data, examine transaction",
-                        traceback='Transaction: %s\n%s'%(tx, e))
+                        traceback='Transaction: %s\n%s' % (tx, e))
                     tx['tokenTo'] = address
 
             for key in ['hash', 'blockHash']:
@@ -64,6 +66,7 @@ class EthDriver(object):
 
             yield tx
 
+
 class Software(model_base.NicknamedBase):
     def get_driver(self, network):
         if(self.nickname == 'Ethereum'):
@@ -73,13 +76,18 @@ class Software(model_base.NicknamedBase):
     def ETHEREUM(cls):
         return cls.UNIQUE('Ethereum')
 
+
 class Network(model_base.NicknamedBase):
     software = models.ForeignKey(Software, on_delete=models.DO_NOTHING)
     endpoint = models.TextField()
-    
+
     @classmethod
     def MAIN(cls):
         return MAIN_NETWORK()
+
+    @classmethod
+    def ROPSTEN(cls):
+        return ROPSTEN_NETWORK()
 
     @property
     def driver(self):
@@ -90,6 +98,7 @@ class Network(model_base.NicknamedBase):
     def current_block(self):
         return self.driver.current_block()
 
+
 class Scanner(model_base.NicknamedBase):
     network = models.ForeignKey(Network, on_delete=models.DO_NOTHING)
     latest_block = models.PositiveIntegerField(default=0)
@@ -98,7 +107,8 @@ class Scanner(model_base.NicknamedBase):
     def get_watched_addresses(self):
         # TODO: IF LENGTH OF WATCHED > 2000 MAIL ADMINS
         from apps.subscriptions.models import Subscription
-        watched_addresses = [s.watched_address for s in Subscription.objects.all()]
+        watched_addresses = [
+            s.watched_address for s in Subscription.objects.all()]
         cleaned = list(map(lambda s: s.lower().strip(), watched_addresses))
         return cleaned
 
@@ -106,7 +116,7 @@ class Scanner(model_base.NicknamedBase):
         # We'll eventually need to move the lookup to
         # a sql query, once it is no longer memory efficient
         # to do here
-        get = lambda key: (tx.get(key, '') or '').lower()
+        def get(key): return (tx.get(key, '') or '').lower()
         to = get('to')
         frm = get('from')
         tkto = get('tokenTo')
@@ -118,12 +128,13 @@ class Scanner(model_base.NicknamedBase):
             unlock_time = self.locked_thread_time + timedelta(seconds=90)
             if unlock_time <= now:
                 self.release_lock()
-            else: return False
+            else:
+                return False
 
         self.locked_thread_time = now
         self.save()
         return True
-    
+
     def release_lock(self):
         scanlog.debug('Releasing scanner lock...')
         self.locked_thread_time = None
@@ -133,7 +144,7 @@ class Scanner(model_base.NicknamedBase):
     def watched_cache(self):
         if not hasattr(self, '_watched_addresses'):
             setattr(self, '_watched_addresses',
-                self.get_watched_addresses())
+                    self.get_watched_addresses())
         return self._watched_addresses
 
     def next_block_to_scan(self):
@@ -150,14 +161,15 @@ class Scanner(model_base.NicknamedBase):
         self.save()
 
     def process_block(self, block_number, save_transactions=False):
-        transactions = list(self.network.driver.find_transactions(block_number))
+        transactions = list(
+            self.network.driver.find_transactions(block_number))
 
-        scanlog.info('Processing block: %s @ %s - %s transactions'%(
+        scanlog.info('Processing block: %s @ %s - %s transactions' % (
             self.network, block_number, len(transactions)))
 
         if save_transactions:
             import json
-            fh = open('tests/transactions/block-%s.json'%block_number, 'w+')
+            fh = open('tests/transactions/block-%s.json' % block_number, 'w+')
             json.dump(transactions, fh, indent=2)
 
         return self.process_transactions(transactions)
@@ -167,7 +179,7 @@ class Scanner(model_base.NicknamedBase):
         from apps.contracts.models import ERC20
         for tx in transactions:
             if self.in_watch_cache(tx):
-                scanlog.debug('Found transaction: %s'%tx)
+                scanlog.debug('Found transaction: %s' % tx)
                 find_subscribers = (
                     models.Q(watched_address__iexact=tx['to']) |
                     models.Q(watched_address__iexact=tx['from'])
@@ -186,9 +198,9 @@ class Scanner(model_base.NicknamedBase):
                     except Exception as e:
                         from apps.errors.models import ErrorLog
                         ErrorLog.WARNING('Error importing token',
-                            str(e),
-                            transaction=tx['hash']
-                        )
+                                         str(e),
+                                         transaction=tx['hash']
+                                         )
                         scanlog.error('Error importing token %s' % e)
 
     def __unicode__(self):
@@ -197,6 +209,11 @@ class Scanner(model_base.NicknamedBase):
     @classmethod
     def MAIN(cls):
         return MAIN_SCANNER()
+
+    @classmethod
+    def ROPSTEN(cls):
+        return ROPSTEN_SCANNER()
+
     @classmethod
     def TEST(cls):
         return TEST_SCANNER()
@@ -204,21 +221,25 @@ class Scanner(model_base.NicknamedBase):
     def block_scan(self, start_block, end_block=None, timeout=10, update_latest=False, save_transactions=False):
         thread_number = int(random.random() * 10000)
         if not self.get_available_lock():
-            scanlog.info('Duplicate blockscan, exiting: %s#%s'%(self.network, thread_number))
+            scanlog.info('Duplicate blockscan, exiting: %s#%s' %
+                         (self.network, thread_number))
             return
-        
-        scanlog.info('Starting blockscan: %s#%s'%(self.network, thread_number))
+
+        scanlog.info('Starting blockscan: %s#%s' %
+                     (self.network, thread_number))
         start = time.time()
         end = start + timeout
         next_block = start_block
         while time.time() < end:
             elapsed = time.time() - start
             if next_block > self.network.current_block():
-                scanlog.info('Ending blockscan#%s [%s]: No more blocks!'%(thread_number, elapsed))
+                scanlog.info('Ending blockscan#%s [%s]: No more blocks!' % (
+                    thread_number, elapsed))
                 self.release_lock()
                 return
             if end_block and next_block > end_block:
-                scanlog.info('Ending blockscan#%s [%s]: Reached endblock!'%(thread_number, elapsed))
+                scanlog.info('Ending blockscan#%s [%s]: Reached endblock!' % (
+                    thread_number, elapsed))
                 self.release_lock()
                 return
 
@@ -233,33 +254,47 @@ class Scanner(model_base.NicknamedBase):
         elapsed = time.time() - start
 
         # Mail an admin if we run out of scanblock time
-        scanlog.info('Ending blockscan#%s [%s]: Out of time!'%(thread_number, elapsed))
+        scanlog.info('Ending blockscan#%s [%s]: Out of time!' % (
+            thread_number, elapsed))
         self.release_lock()
         sys.exit()
 
     def scan_tail(self, timeout):
         return self.block_scan(self.latest_block, timeout=timeout, update_latest=True)
 
+
 def DEFAULT():
     ether = Software.ETHEREUM()
     return {
         'mainnet': Network.UNIQUE('Ethereum Mainnet',
-            software=ether,
-            endpoint=eth.WEB3_INFURA['main']
-        ),
+                                  software=ether,
+                                  endpoint=eth.WEB3_INFURA['main']
+                                  ),
         'ropsten': Network.UNIQUE('Ethereum Ropsten',
-            software=ether,
-            endpoint=eth.WEB3_INFURA['ropsten']
-        ),
+                                  software=ether,
+                                  endpoint=eth.WEB3_INFURA['ropsten']
+                                  ),
     }
+
 
 def MAIN_NETWORK():
     return DEFAULT()['mainnet']
 
+
+def ROPSTEN_NETWORK():
+    return DEFAULT()['ropsten']
+
+
 def MAIN_SCANNER():
     main = MAIN_NETWORK()
-    return Scanner.UNIQUE('PRIMARY - %s'%main.nickname, network=main)
+    return Scanner.UNIQUE('PRIMARY - %s' % main.nickname, network=main)
+
+
+def ROPSTEN_SCANNER():
+    ropsten = ROPSTEN_NETWORK()
+    return Scanner.UNIQUE('SECONDARY - %s' % ropsten.nickname, network=ropsten)
+
 
 def TEST_SCANNER():
     main = MAIN_NETWORK()
-    return Scanner.UNIQUE('TEST - %s'%main.nickname, network=main)
+    return Scanner.UNIQUE('TEST - %s' % main.nickname, network=main)

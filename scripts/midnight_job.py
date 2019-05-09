@@ -11,6 +11,6 @@ from apps.users.models import CustomUser as User
 @safe_script
 def run():
     for user in User.objects.all():
-        user.add_monthly_credit()
+        #user.add_monthly_credit()
         user.low_credit_balance_email()
     
