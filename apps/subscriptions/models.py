@@ -7,6 +7,7 @@ import requests
 import logging
 from django.conf import settings
 from decimal import Decimal
+from apps.networks.models import MAIN_NETWORK
 
 log = logging.getLogger('subscriptions')
 log.setLevel(logging.DEBUG)
@@ -23,6 +24,7 @@ class Subscription(model_base.NicknamedBase):
     include_pricing_data = models.BooleanField(default=False)
     specific_contract_calls = models.BooleanField(default=False)
     abi_methods = models.TextField(null=True, blank=True)
+    network = models.ForeignKey("networks.Network", null=True, on_delete=models.DO_NOTHING)
     STATUS_CHOICES = [('active', 'active'), ('paused', 'paused')]
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='active')
 

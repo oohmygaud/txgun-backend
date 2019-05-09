@@ -22,7 +22,8 @@ class SubscriptionViewSet(viewsets.ModelViewSet):
                         'watch_token_transfers',
                         'specific_contract_calls',
                         'summary_notifications',
-                        'include_pricing_data')
+                        'include_pricing_data',
+                        'network')
 
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)

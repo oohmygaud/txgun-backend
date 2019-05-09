@@ -4,14 +4,13 @@ from rest_framework.response import Response
 from apps.subscriptions.models import Subscription, SubscribedTransaction
 from datetime import datetime, timedelta
 from django.db.models import Sum
-from apps.subscriptions.serializers import (
-    SubscribedTransactionSerializer,
+from .serializers import (
     APICreditSerializer,
     APIKeySerializer,
     UserSerializer
 )
-from apps.users.models import APICredit, APIKey
-from apps.users.models import CustomUser as User
+from apps.subscriptions.serializers import SubscribedTransactionSerializer
+from .models import CustomUser as User, APICredit, APIKey
 from rest_framework import viewsets
 from .permissions import IsOwner
 from django.utils import timezone
