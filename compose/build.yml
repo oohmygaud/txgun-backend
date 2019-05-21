@@ -7,5 +7,6 @@ services:
   tritium-django:
     build:
       context: ../
+      dockerfile: Dockerfile.production
     image: tritium-django
 

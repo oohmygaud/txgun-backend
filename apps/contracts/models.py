@@ -9,6 +9,7 @@ from django.conf import settings
 from requests.exceptions import ConnectionError, Timeout, TooManyRedirects
 from django.utils import timezone
 import json
+from apps.metrics import count_metrics
 
 
 class Interface(model_base.NicknamedBase):
@@ -16,6 +17,7 @@ class Interface(model_base.NicknamedBase):
 
 
 def get_etherscan_abi(address):
+    count_metrics('api.get_etherscan_abi')
     url = settings.ETHSCAN_URL + 'module=contract&action=getabi&address=' + address
     response = requests.get(url)
     return json.loads(response.content)['result']
@@ -137,6 +139,7 @@ class PriceLookup(model_base.RandomPKBase):
     def do_lookup(cls, asset, currency='USD'):
         if asset == 'ETH':
             url = 'https://pro-api.coinmarketcap.com/v1/cryptocurrency/quotes/latest'
+            count_metrics('api.coinmarketcap_get_price')
             parameters = {
                 'symbol': asset,
                 'convert': currency

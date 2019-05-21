@@ -7,6 +7,7 @@ django-rest-framework
 django-storages
 django-auditlog
 boto
+boto3
 django-environ
 django-ses
 django-s3-storage==0.12.4
@@ -22,3 +23,4 @@ django-rest-registration
 django-jet
 django-cors-headers
 djangorestframework_simplejwt
+uwsgi

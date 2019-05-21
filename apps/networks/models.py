@@ -9,6 +9,7 @@ import pytz
 import time
 import logging
 import sys
+from apps.metrics import count_metrics
 
 scanlog = logging.getLogger('scanner')
 
@@ -161,6 +162,7 @@ class Scanner(model_base.NicknamedBase):
         self.save()
 
     def process_block(self, block_number, save_transactions=False):
+        count_metrics('scanner.process_block', {'network': self.network.nickname})
         transactions = list(
             self.network.driver.find_transactions(block_number))
 
@@ -177,7 +179,9 @@ class Scanner(model_base.NicknamedBase):
     def process_transactions(self, transactions):
         from apps.subscriptions.models import Subscription
         from apps.contracts.models import ERC20
+        count = 0
         for tx in transactions:
+            count += 1
             if self.in_watch_cache(tx):
                 scanlog.debug('Found transaction: %s' % tx)
                 find_subscribers = (
@@ -195,6 +199,7 @@ class Scanner(model_base.NicknamedBase):
                 if tx.get('isToken'):
                     try:
                         ERC20.DISCOVERED_TOKEN(self.network, tx['to'])
+                        count_metrics('scanner.token_discovered', {'network': self.network.nickname})
                     except Exception as e:
                         from apps.errors.models import ErrorLog
                         ErrorLog.WARNING('Error importing token',
@@ -202,6 +207,8 @@ class Scanner(model_base.NicknamedBase):
                                          transaction=tx['hash']
                                          )
                         scanlog.error('Error importing token %s' % e)
+                        count_metrics('scanner.token_import_error', {'network': self.network.nickname})
+        count_metrics('scanner.process_transactions', {'network': self.network.nickname}, count)
 
     def __unicode__(self):
         return '%s @ %s' % (str(self), self.latest_block)
@@ -223,6 +230,7 @@ class Scanner(model_base.NicknamedBase):
         if not self.get_available_lock():
             scanlog.info('Duplicate blockscan, exiting: %s#%s' %
                          (self.network, thread_number))
+            count_metrics('scanner.duplicate_blockscanner', {'network': self.network.nickname})
             return
 
         scanlog.info('Starting blockscan: %s#%s' %
@@ -235,11 +243,13 @@ class Scanner(model_base.NicknamedBase):
             if next_block > self.network.current_block():
                 scanlog.info('Ending blockscan#%s [%s]: No more blocks!' % (
                     thread_number, elapsed))
+                count_metrics('scanner.end_blockscan', {'network': self.network.nickname, 'reason': 'no_more_blocks'}, elapsed, 'Seconds')
                 self.release_lock()
                 return
             if end_block and next_block > end_block:
                 scanlog.info('Ending blockscan#%s [%s]: Reached endblock!' % (
                     thread_number, elapsed))
+                count_metrics('scanner.end_blockscan', {'network': self.network.nickname, 'reason': 'reached_endblock'}, elapsed, 'Seconds')
                 self.release_lock()
                 return
 
@@ -256,6 +266,7 @@ class Scanner(model_base.NicknamedBase):
         # Mail an admin if we run out of scanblock time
         scanlog.info('Ending blockscan#%s [%s]: Out of time!' % (
             thread_number, elapsed))
+        count_metrics('scanner.end_blockscan', {'network': self.network.nickname, 'reason': 'out_of_time'}, elapsed, 'Seconds')
         self.release_lock()
         sys.exit()
 

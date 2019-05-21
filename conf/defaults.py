@@ -136,7 +136,7 @@ MIDDLEWARE = [
 CORS_ORIGIN_ALLOW_ALL = False
 
 CORS_ORIGIN_WHITELIST = (
-    'localhost:8080',
-    'txgun.io'
+    'http://localhost:8080',
+    'https://txgun.io'
 )
 CORS_ALLOW_CREDENTIALS = True

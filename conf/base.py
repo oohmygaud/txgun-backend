@@ -8,6 +8,7 @@ env = environ.Env(DEBUG=(bool, False),) # set default values and casting
 ZAPPA=os.environ.get('is_zappa', '') == 'true'
 DEBUG=os.environ.get('DEBUG', '') != 'false' or not ZAPPA
 
+
 INSTALLED_APPS = [
     'django.contrib.auth',
     'jet.dashboard',
@@ -145,5 +146,8 @@ SIMPLE_JWT = {
 }
 
 CMC_API_KEY = 'a79b1aa0-36c0-45d1-980f-b951eb4382b1'
+
+METRIC_ACCESS_KEY_ID = os.environ.get('METRIC_ACCESS_KEY_ID', '')
+METRIC_SECRET_ACCESS_KEY = os.environ.get('METRIC_SECRET_ACCESS_KEY', '')
 
 from .eth import *

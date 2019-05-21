@@ -8,6 +8,7 @@ import logging
 from django.conf import settings
 from decimal import Decimal
 from apps.networks.models import MAIN_NETWORK
+from apps.metrics import count_metrics
 
 log = logging.getLogger('subscriptions')
 log.setLevel(logging.DEBUG)
@@ -37,6 +38,7 @@ class Subscription(model_base.NicknamedBase):
         if self.status == 'paused':
             log.debug(
                 'Subscription is paused, skipping transaction')
+            count_metrics('tx.subscription_paused', {'network': self.network.nickname})
             return
 
         if tx['hasData'] and self.specific_contract_calls:
@@ -45,20 +47,24 @@ class Subscription(model_base.NicknamedBase):
             function = contract.get_web3_contract().get_function_by_selector(tx['input'][:10])
             if function.fn_name not in self.abi_methods.split(','):
                 log.debug('Not watching this function: %s'%function.fn_name)
+                count_metrics('tx.function_not_watched', {'network': self.network.nickname})
                 return
         
         elif self.watch_token_transfers == False and tx['isToken']:
             log.debug(
                 'Its a token transaction and we arent watching tokens, skip')
+            count_metrics('tx.tokens_not_watched', {'network': self.network.nickname})
             return
 
         if SubscribedTransaction.objects.filter(tx_hash=tx['hash'], subscription=self):
             log.debug('Already seen this transaction before, skipping')
+            count_metrics('tx.duplicate_transaction', {'network': self.network.nickname})
             return
         
         
         if not 'datetime' in tx:
             log.error('WHAT THE HELL GUY, NO DATETIME')
+            count_metrics('tx.error_missing_datetime', {'network': self.network.nickname})
             return
 
         SubscribedTransaction.objects.create(
@@ -87,20 +93,28 @@ class Subscription(model_base.NicknamedBase):
         if self.notify_url and self.user.subtract_credit(
                 settings.NOTIFICATION_CREDIT_COST, 'Webhook Notification'):
             log.debug('Webhook TX Notification to %s' % self.notify_url)
-            r = requests.post(self.notify_url, data=tx)
-            log.debug('Webhook response: %s' % r.content)
+            try:
+                r = requests.post(self.notify_url, data=tx)
+                log.debug('Webhook response: %s' % r.content)
+                count_metrics('tx.notify_webhook_success', {'network': self.network.nickname})
+            except Exception as e:
+                count_metrics('tx.notify_webhook_error', {'network': self.network.nickname})
+            
 
         
         if self.notify_email and self.user.subtract_credit(
                 settings.NOTIFICATION_CREDIT_COST, 'Email Notification'):
             log.debug('Email TX Notification to %s' % self.notify_email)
-            send_mail(
-                'Transaction Received',
-                json.dumps(tx, indent=2),
-                'noreply@txgun.io',
-                [self.notify_email],
-                fail_silently=False,
-            )
+            try:
+                send_mail(
+                    'Transaction Received',
+                    json.dumps(tx, indent=2),
+                    'noreply@txgun.io',
+                    [self.notify_email],
+                )
+                count_metrics('tx.notify_email_success', {'network': self.network.nickname})
+            except Exception as e:
+                count_metrics('tx.notify_email_error', {'network': self.network.nickname})
 
     class Meta:
         ordering = ('-created_at',)
