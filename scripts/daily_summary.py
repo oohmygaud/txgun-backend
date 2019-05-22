@@ -12,8 +12,11 @@ from io import StringIO
 @safe_script
 def run():
     yesterday = datetime.utcnow()-timedelta(days=1)
-    daily_summaries_enabled = Subscription.objects.filter(daily_notifications=True)
+    daily_summaries_enabled = Subscription.objects.filter(daily_emails=True)
+    
     for subscription in daily_summaries_enabled:
+        if self.daily_emails == True and self.user.subtract_credit(
+                settings.DAILY_SUMMARY_CREDIT_COST, 'Daily Summary')
         summary = [SubscribedTransactionSerializer(s).data
                     for s in subscription.transactions.filter(
                         created_at__gte=yesterday)]
@@ -31,7 +34,7 @@ def run():
             '%s: Daily Summary' % subscription.nickname,
             'Attached as csv',
             'noreply@txgun.io',
-            [subscription.notify_email],
+            [subscription.user.email],
         )
         email.attach('file.csv', csvfile.getvalue(), 'text/csv')
         email.send()

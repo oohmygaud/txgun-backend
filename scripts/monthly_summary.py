@@ -12,8 +12,10 @@ from io import StringIO
 @safe_script
 def run():
     last_month = datetime.utcnow()-timedelta(days=30)
-    monthly_summaries_enabled = Subscription.objects.filter(monthly_notifications=True)
+    monthly_summaries_enabled = Subscription.objects.filter(monthly_emails=True)
     for subscription in monthly_summaries_enabled:
+        if self.monthly_emails == True and self.user.subtract_credit(
+                settings.MONTHLY_SUMMARY_CREDIT_COST, 'Monthly Summary')
         summary = [SubscribedTransactionSerializer(s).data
                     for s in subscription.transactions.filter(
                         created_at__gte=last_month)]
@@ -31,7 +33,7 @@ def run():
             '%s: Monthly Summary' % subscription.nickname,
             'Attached as csv',
             'noreply@txgun.io',
-            [subscription.notify_email],
+            [subscription.user.email],
         )
         email.attach('file.csv', csvfile.getvalue(), 'text/csv')
         email.send()
