@@ -12,8 +12,8 @@ from io import StringIO
 @safe_script
 def run():
     yesterday = datetime.utcnow()-timedelta(days=1)
-    summaries_enabled = Subscription.objects.filter(summary_notifications=True)
-    for subscription in summaries_enabled:
+    daily_summaries_enabled = Subscription.objects.filter(daily_notifications=True)
+    for subscription in daily_summaries_enabled:
         summary = [SubscribedTransactionSerializer(s).data
                     for s in subscription.transactions.filter(
                         created_at__gte=yesterday)]
@@ -28,7 +28,7 @@ def run():
             writer.writerow(tx)
         
         email = EmailMessage(
-            'Notification Summary',
+            '%s: Daily Summary' % subscription.nickname,
             'Attached as csv',
             'noreply@txgun.io',
             [subscription.notify_email],

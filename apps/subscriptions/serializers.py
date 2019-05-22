@@ -9,15 +9,11 @@ class SubscriptionSerializer(serializers.ModelSerializer):
 class SubscribedTransactionSerializer(serializers.ModelSerializer):
     pricing_info = serializers.SerializerMethodField()
     token_info = serializers.SerializerMethodField()
+
     def get_pricing_info(self, obj):
         if not obj.price_lookup:
             return {}
-        return {
-            'price': obj.get_price(),
-            'currency': obj.get_currency(),
-            'fiat': obj.get_fiat(),
-            'asset': obj.get_asset()
-        }
+        return obj.get_pricing_info()
     
     def get_token_info(self, obj):
         token = obj.get_token()
