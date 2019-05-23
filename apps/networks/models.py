@@ -126,7 +126,7 @@ class Scanner(model_base.NicknamedBase):
     def get_available_lock(self):
         now = timezone.now()
         if self.locked_thread_time:
-            unlock_time = self.locked_thread_time + timedelta(seconds=90)
+            unlock_time = self.locked_thread_time + timedelta(seconds=150)
             if unlock_time <= now:
                 self.release_lock()
             else:
@@ -161,8 +161,7 @@ class Scanner(model_base.NicknamedBase):
         self.latest_block = next_block
         self.save()
 
-    def process_block(self, block_number, save_transactions=False):
-        count_metrics('scanner.process_block', {'network': self.network.nickname})
+    def process_block(self, block_number, save_transactions=False, background=False):
         transactions = list(
             self.network.driver.find_transactions(block_number))
 
@@ -174,7 +173,16 @@ class Scanner(model_base.NicknamedBase):
             fh = open('tests/transactions/block-%s.json' % block_number, 'w+')
             json.dump(transactions, fh, indent=2)
 
-        return self.process_transactions(transactions)
+        if not background:
+            self.process_transactions(transactions)
+        else:
+            from .tasks import async_process_transactions
+            async_process_transactions(self.id, transactions)
+            time.sleep(1)
+
+        # At the very end
+        count_metrics('scanner.process_block', {'network': self.network.nickname})
+
 
     def process_transactions(self, transactions):
         from apps.subscriptions.models import Subscription
@@ -182,6 +190,7 @@ class Scanner(model_base.NicknamedBase):
         count = 0
         for tx in transactions:
             count += 1
+            tx_timer = time.time()
             if self.in_watch_cache(tx):
                 scanlog.debug('Found transaction: %s' % tx)
                 find_subscribers = (
@@ -194,12 +203,18 @@ class Scanner(model_base.NicknamedBase):
                         models.Q(watched_address__iexact=tx['tokenTo'])
                     )
                 subscriptions = Subscription.objects.filter(find_subscribers)
+                count_metrics('scanner.timers.filter_subscriptions', {'network': self.network.nickname}, time.time() - tx_timer, 'Seconds')
                 for subscription in subscriptions:
+                    subscription_timer = time.time()
                     subscription.found_transaction(tx)
+                    count_metrics('scanner.timers.found_transaction', {'network': self.network.nickname}, time.time() - subscription_timer, 'Seconds')
+                
                 if tx.get('isToken'):
+                    token_timer = time.time()
                     try:
                         ERC20.DISCOVERED_TOKEN(self.network, tx['to'])
                         count_metrics('scanner.token_discovered', {'network': self.network.nickname})
+                        count_metrics('scanner.timers.discover_token', {'network': self.network.nickname}, time.time() - token_timer, 'Seconds')
                     except Exception as e:
                         from apps.errors.models import ErrorLog
                         ErrorLog.WARNING('Error importing token',
@@ -208,6 +223,9 @@ class Scanner(model_base.NicknamedBase):
                                          )
                         scanlog.error('Error importing token %s' % e)
                         count_metrics('scanner.token_import_error', {'network': self.network.nickname})
+                        count_metrics('scanner.timers.discover_token_error', {'network': self.network.nickname}, time.time() - token_timer, 'Seconds')
+                        
+            count_metrics('scanner.timers.whole_process', {'network': self.network.nickname}, time.time() - tx_timer, 'Seconds')
         count_metrics('scanner.process_transactions', {'network': self.network.nickname}, count)
 
     def __unicode__(self):
@@ -225,7 +243,7 @@ class Scanner(model_base.NicknamedBase):
     def TEST(cls):
         return TEST_SCANNER()
 
-    def block_scan(self, start_block, end_block=None, timeout=10, update_latest=False, save_transactions=False):
+    def block_scan(self, start_block, end_block=None, timeout=10, update_latest=False, save_transactions=False, background=False):
         thread_number = int(random.random() * 10000)
         if not self.get_available_lock():
             scanlog.info('Duplicate blockscan, exiting: %s#%s' %
@@ -240,9 +258,11 @@ class Scanner(model_base.NicknamedBase):
         next_block = start_block
         while time.time() < end:
             elapsed = time.time() - start
-            if next_block > self.network.current_block():
-                scanlog.info('Ending blockscan#%s [%s]: No more blocks!' % (
-                    thread_number, elapsed))
+            current_block = self.network.current_block()
+            count_metrics('scanner.blocks_behind', {'network': self.network.nickname}, max(current_block - next_block, 0))
+            if next_block > current_block:
+                scanlog.info('Ending blockscan#%s [%s]: No more %s blocks!' % (
+                    thread_number, elapsed, self.network))
                 count_metrics('scanner.end_blockscan', {'network': self.network.nickname, 'reason': 'no_more_blocks'}, elapsed, 'Seconds')
                 self.release_lock()
                 return
@@ -253,7 +273,7 @@ class Scanner(model_base.NicknamedBase):
                 self.release_lock()
                 return
 
-            self.process_block(next_block, save_transactions=save_transactions)
+            self.process_block(next_block, save_transactions=save_transactions, background=background)
 
             if update_latest:
                 self.latest_block = next_block
@@ -270,8 +290,8 @@ class Scanner(model_base.NicknamedBase):
         self.release_lock()
         sys.exit()
 
-    def scan_tail(self, timeout):
-        return self.block_scan(self.latest_block, timeout=timeout, update_latest=True)
+    def scan_tail(self, timeout, background=False):
+        return self.block_scan(self.latest_block + 1, timeout=timeout, update_latest=True, background=background)
 
 
 def DEFAULT():

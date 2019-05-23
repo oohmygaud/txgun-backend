@@ -7,4 +7,4 @@ def run():
     scanlog.info('Starting up Ropsten Scanner Script')
     from apps.networks.models import Scanner
     scanner = Scanner.ROPSTEN()
-    scanner.scan_tail(timeout=120)
+    scanner.scan_tail(timeout=110, background=True)

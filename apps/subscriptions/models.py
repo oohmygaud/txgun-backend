@@ -151,7 +151,8 @@ class Subscription(model_base.NicknamedBase):
 
         reason = ('Transaction [%s]: '%self.nickname) + ','.join(charges)
         if not self.user.subtract_credit(credits, reason):
-            self.pause()
+            self.status = 'paused'
+            self.save()
 
     def serialize(self):
         from .serializers import SubscriptionSerializer
@@ -171,7 +172,7 @@ class SubscribedTransaction(model_base.RandomPKBase):
     from_address = models.CharField(max_length=64)
     gas = models.PositiveIntegerField()
     gas_price = models.DecimalField(max_digits=50, decimal_places=0)
-    tx_hash = models.TextField()
+    tx_hash = models.CharField(max_length=128, db_index=True)
     tx_input = models.TextField()
     nonce = models.PositiveIntegerField()
     to_address = models.CharField(max_length=64)
