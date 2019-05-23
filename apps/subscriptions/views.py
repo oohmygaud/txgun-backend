@@ -21,8 +21,8 @@ class SubscriptionViewSet(viewsets.ModelViewSet):
                         'archived_at',
                         'watch_token_transfers',
                         'specific_contract_calls',
-                        'daily_notifications',
-                        'monthly_notifications',
+                        'daily_emails',
+                        'monthly_emails',
                         'include_pricing_data',
                         'network')
 

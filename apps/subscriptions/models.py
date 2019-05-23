@@ -22,8 +22,10 @@ class Subscription(model_base.NicknamedBase):
     notify_url = models.CharField(max_length=2048, null=True, blank=True)
     archived_at = models.DateTimeField(null=True, blank=True)
     watch_token_transfers = models.BooleanField(default=False)
-    daily_notifications = models.BooleanField(default=False)
-    monthly_notifications = models.BooleanField(default=False)
+    daily_emails = models.BooleanField(default=False)
+    monthly_emails = models.BooleanField(default=False)
+    realtime_emails = models.BooleanField(default=True)
+    realtime_webhooks = models.BooleanField(default=False)
     include_pricing_data = models.BooleanField(default=False)
     specific_contract_calls = models.BooleanField(default=False)
     abi_methods = models.TextField(null=True, blank=True)
@@ -119,7 +121,7 @@ class Subscription(model_base.NicknamedBase):
             'subscription': self.serialize()
         }
 
-        if self.notify_url:
+        if self.notify_url and self.realtime_webhooks:
             log.debug('Webhook TX Notification to %s' % self.notify_url)
             try:
                 r = requests.post(self.notify_url, data=output)
@@ -132,7 +134,7 @@ class Subscription(model_base.NicknamedBase):
                 count_metrics('tx.notify_webhook_error', {
                               'network': self.network.nickname})
 
-        if self.notify_email:
+        if self.notify_email and self.realtime_emails:
             log.debug('Email TX Notification to %s' % self.notify_email)
             try:
                 send_mail(
