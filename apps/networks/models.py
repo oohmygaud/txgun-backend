@@ -24,6 +24,9 @@ class EthDriver(object):
     def get_block(self, block_number):
         return self.web3.eth.getBlock(block_number, full_transactions=True)
 
+    def get_balance(self, address):
+        return self.web3.eth.getBalance(Web3.toChecksumAddress(address))
+
     def find_transactions(self, block_number, retry=True):
         scanlog.debug('find_transactions: block=%s' % block_number)
         block = self.get_block(block_number)
@@ -99,6 +102,9 @@ class Network(model_base.NicknamedBase):
     def current_block(self):
         return self.driver.current_block()
 
+    def get_balance(self, address):
+        return self.driver.get_balance(address)
+
 
 class Scanner(model_base.NicknamedBase):
     network = models.ForeignKey(Network, on_delete=models.DO_NOTHING)
@@ -161,7 +167,7 @@ class Scanner(model_base.NicknamedBase):
         self.latest_block = next_block
         self.save()
 
-    def process_block(self, block_number, save_transactions=False, background=False):
+    def process_block(self, block_number, save_transactions=False):
         transactions = list(
             self.network.driver.find_transactions(block_number))
 
@@ -173,13 +179,9 @@ class Scanner(model_base.NicknamedBase):
             fh = open('tests/transactions/block-%s.json' % block_number, 'w+')
             json.dump(transactions, fh, indent=2)
 
-        if not background:
-            self.process_transactions(transactions)
-        else:
-            from .tasks import async_process_transactions
-            async_process_transactions(self.id, transactions)
-            time.sleep(1)
-
+        
+        self.process_transactions(transactions)
+        
         # At the very end
         count_metrics('scanner.process_block', {'network': self.network.nickname})
 
@@ -203,18 +205,18 @@ class Scanner(model_base.NicknamedBase):
                         models.Q(watched_address__iexact=tx['tokenTo'])
                     )
                 subscriptions = Subscription.objects.filter(find_subscribers)
-                count_metrics('scanner.timers.filter_subscriptions', {'network': self.network.nickname}, time.time() - tx_timer, 'Seconds')
+                #count_metrics('scanner.timers.filter_subscriptions', {'network': self.network.nickname}, time.time() - tx_timer, 'Seconds')
                 for subscription in subscriptions:
                     subscription_timer = time.time()
                     subscription.found_transaction(tx)
-                    count_metrics('scanner.timers.found_transaction', {'network': self.network.nickname}, time.time() - subscription_timer, 'Seconds')
+                    #count_metrics('scanner.timers.found_transaction', {'network': self.network.nickname}, time.time() - subscription_timer, 'Seconds')
                 
                 if tx.get('isToken'):
                     token_timer = time.time()
                     try:
                         ERC20.DISCOVERED_TOKEN(self.network, tx['to'])
-                        count_metrics('scanner.token_discovered', {'network': self.network.nickname})
-                        count_metrics('scanner.timers.discover_token', {'network': self.network.nickname}, time.time() - token_timer, 'Seconds')
+                        #count_metrics('scanner.token_discovered', {'network': self.network.nickname})
+                        #count_metrics('scanner.timers.discover_token', {'network': self.network.nickname}, time.time() - token_timer, 'Seconds')
                     except Exception as e:
                         from apps.errors.models import ErrorLog
                         ErrorLog.WARNING('Error importing token',
@@ -222,10 +224,10 @@ class Scanner(model_base.NicknamedBase):
                                          transaction=tx['hash']
                                          )
                         scanlog.error('Error importing token %s' % e)
-                        count_metrics('scanner.token_import_error', {'network': self.network.nickname})
-                        count_metrics('scanner.timers.discover_token_error', {'network': self.network.nickname}, time.time() - token_timer, 'Seconds')
+                        #count_metrics('scanner.token_import_error', {'network': self.network.nickname})
+                        #count_metrics('scanner.timers.discover_token_error', {'network': self.network.nickname}, time.time() - token_timer, 'Seconds')
                         
-            count_metrics('scanner.timers.whole_process', {'network': self.network.nickname}, time.time() - tx_timer, 'Seconds')
+            #count_metrics('scanner.timers.whole_process', {'network': self.network.nickname}, time.time() - tx_timer, 'Seconds')
         count_metrics('scanner.process_transactions', {'network': self.network.nickname}, count)
 
     def __unicode__(self):
@@ -273,7 +275,11 @@ class Scanner(model_base.NicknamedBase):
                 self.release_lock()
                 return
 
-            self.process_block(next_block, save_transactions=save_transactions, background=background)
+            if background:
+                from .tasks import async_process_block
+                async_process_block(self.id, next_block)
+            else:
+                self.process_block(next_block, save_transactions=save_transactions)
 
             if update_latest:
                 self.latest_block = next_block

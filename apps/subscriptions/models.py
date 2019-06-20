@@ -16,19 +16,21 @@ log.setLevel(logging.DEBUG)
 
 class Subscription(model_base.NicknamedBase):
     objects = models.Manager()
-    notify_email = models.CharField(max_length=128, null=True, blank=True)
+    notify_email = models.CharField(max_length=512, null=True, blank=True)
     watched_address = models.CharField(max_length=64)
     user = models.ForeignKey(get_user_model(), on_delete=models.DO_NOTHING)
     notify_url = models.CharField(max_length=2048, null=True, blank=True)
     archived_at = models.DateTimeField(null=True, blank=True)
     watch_token_transfers = models.BooleanField(default=False)
     daily_emails = models.BooleanField(default=False)
+    weekly_emails = models.BooleanField(default=False)
     monthly_emails = models.BooleanField(default=False)
     realtime_emails = models.BooleanField(default=True)
     realtime_webhooks = models.BooleanField(default=False)
     include_pricing_data = models.BooleanField(default=False)
     specific_contract_calls = models.BooleanField(default=False)
     abi_methods = models.TextField(null=True, blank=True)
+    low_balance_warning = models.BooleanField(default=False)
     network = models.ForeignKey(
         "networks.Network", null=True, on_delete=models.DO_NOTHING)
     STATUS_CHOICES = [('active', 'active'), ('paused', 'paused')]
@@ -62,6 +64,8 @@ class Subscription(model_base.NicknamedBase):
                           'network': self.network.nickname})
             return
 
+        
+
         if tx['hasData'] and self.specific_contract_calls:
             contract = Contract.LOOKUP(tx['to'])
             function = contract.get_web3_contract(
@@ -72,19 +76,21 @@ class Subscription(model_base.NicknamedBase):
                               'network': self.network.nickname})
                 return
             else:
-                charges.append('Method: %s'%function.fn_name)
+                charges.append('Method: %s' % function.fn_name)
                 credits += settings.SPECIFIC_CALLS_CREDIT_COST
 
-        elif self.watch_token_transfers == False:
-            if tx['isToken']:
-                log.debug(
-                    'Its a token transaction and we arent watching tokens, skip')
-                count_metrics('tx.tokens_not_watched', {
-                            'network': self.network.nickname})
-                return
+        else:
+            if self.watch_token_transfers == False:
+                if tx['isToken']:
+                    log.debug(
+                        'Its a token transaction and we arent watching tokens, skip')
+                    count_metrics('tx.tokens_not_watched', {
+                        'network': self.network.nickname})
+                    return
             else:
-                credits += settings.TOKEN_TRANSFERS_CREDIT_COST
-                charges.append('Token Transaction')
+                if tx['isToken']:
+                    credits += settings.TOKEN_TRANSFERS_CREDIT_COST
+                    charges.append('Token Transaction')
 
         if self.include_pricing_data:
             credits += settings.PRICING_DATA_CREDIT_COST
@@ -92,7 +98,7 @@ class Subscription(model_base.NicknamedBase):
             price_info = PriceLookup.get_latest('ETH')
         else:
             price_info = None
-        
+
         stx = SubscribedTransaction.objects.create(
             subscription=self,
             created_at=tx['datetime'],
@@ -136,25 +142,47 @@ class Subscription(model_base.NicknamedBase):
 
         if self.notify_email and self.realtime_emails:
             log.debug('Email TX Notification to %s' % self.notify_email)
-            try:
-                send_mail(
-                    '%s: Transaction Received' % self.nickname,
-                    json.dumps(output, indent=2),
-                    'noreply@txgun.io',
-                    [self.notify_email],
-                )
-                count_metrics('tx.notify_email_success', {
-                              'network': self.network.nickname})
-                credits += settings.NOTIFICATION_CREDIT_COST
-                charges.append('Real-time Email')
-            except Exception as e:
-                count_metrics('tx.notify_email_error', {
-                              'network': self.network.nickname})
 
-        reason = ('Transaction [%s]: '%self.nickname) + ','.join(charges)
+            sent = self.send_notification(
+                '%s: Transaction Received' % self.nickname,
+                json.dumps(output, indent=2)
+            )
+
+            credits += settings.NOTIFICATION_CREDIT_COST * sent
+            charges.append('Real-time Email')
+
+        if self.low_balance_warning:
+            balance = self.network.get_balance(self.watched_address)
+            spent = stx.value + stx.gas * stx.gas_price
+            if balance <= spent * 10:
+                self.send_notification('%s: Low Balance' % self.nickname,
+                'The balance of address %s is too low to sustain transactions of size %s; %s remaining'%
+                (self.watched_address, spent, balance/10E18)
+                )
+
+        reason = ('Transaction [%s]: ' % self.nickname) + ','.join(charges)
         if not self.user.subtract_credit(credits, reason):
             self.status = 'paused'
             self.save()
+
+        
+
+    def send_notification(self, subject, body):
+        sent = 0
+        for email in self.notify_email.split(','):
+            try:
+                send_mail(
+                    subject, body,
+                    'noreply@txgun.io',
+                    [email.strip()],
+                )
+                count_metrics('tx.notify_email_success', {
+                            'network': self.network.nickname})
+                sent += 1  
+            except Exception as e:
+                count_metrics('tx.notify_email_error', {
+                            'network': self.network.nickname})
+        return sent
 
     def serialize(self):
         from .serializers import SubscriptionSerializer

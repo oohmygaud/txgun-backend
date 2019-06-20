@@ -82,6 +82,9 @@ class APICredit(model_base.RandomPKBase):
     amount = models.IntegerField()
     description = models.CharField(max_length=128)
 
+    def __str__(self):
+        return '(%s) %s: %s' % (self.amount, self.user, self.description)
+
     class Meta:
         ordering = ('-created_at',)
 

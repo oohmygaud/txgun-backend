@@ -14,6 +14,7 @@ import pytz
 from pprint import pprint
 from apps.subscriptions import views
 from django.utils import timezone
+from django.conf import settings
 
 def pytz_now():
     return timezone.now()
@@ -54,6 +55,32 @@ class SubscriptionTestCase(TestCase):
         self.assertEqual(len(mail.outbox), 1)
         self.assertEqual(mail.outbox[0].subject, 'test: Transaction Received')
 
+    def test_multiple_email_notification(self):
+        scanner = TEST_SCANNER()
+        tx_list = json.load(open('tests/transactions/block-5000015.json'))
+
+        test_user = User.objects.create_user(username="audrey", email="test@audrey.com", password="audrey")
+        
+        # Create a subscription for an email address
+        Subscription.objects.create(
+            notify_email = '1@1.com,2@2.com',
+            nickname = 'test',
+            watched_address = "0x4D468cf47eB6DF39618dc9450Be4B56A70A520c1",
+            user = test_user,
+            watch_token_transfers = True,
+            network = scanner.network
+        )
+
+        # then process the transactions
+        scanner.process_transactions(tx_list)
+
+        # first we need to make subscription send the email...
+        # then check if it got delivered
+        # https://stackoverflow.com/a/3728594
+
+        self.assertEqual(len(mail.outbox), 2)
+        self.assertEqual(mail.outbox[0].subject, 'test: Transaction Received')
+
 
     def test_summary_emails(self):
         scanner = TEST_SCANNER()
@@ -64,10 +91,11 @@ class SubscriptionTestCase(TestCase):
         # Create a subscription for an email address
         subscription = Subscription.objects.create(
             notify_email = test_user.email,
+            nickname = 'Audrey',
             watched_address = "0x4D468cf47eB6DF39618dc9450Be4B56A70A520c1",
             user = test_user,
             watch_token_transfers = True,
-            summary_notifications = True,
+            daily_emails = True,
             network = scanner.network
         )
 
@@ -79,7 +107,7 @@ class SubscriptionTestCase(TestCase):
 
         daily_summary()
         self.assertEqual(len(mail.outbox), 2)
-        self.assertEqual(mail.outbox[1].subject, 'Notification Summary')
+        self.assertEqual(mail.outbox[1].subject, 'Audrey: Daily Summary')
 
         two_days_ago = today - timedelta(days=2)
     
@@ -106,6 +134,7 @@ class SubscriptionTestCase(TestCase):
             'watched_address': '0x4D468cf47eB6DF39618dc9450Be4B56A70A520c1',
             'notify_url': 'https://webhook.site/cabfb6a8-714b-48b6-8138-78bda05fa9ff',
             'user': user.id,
+            'realtime_emails': True,
             'watch_token_transfers': True,
             'network': scanner.network.id
         })
@@ -207,9 +236,9 @@ class SubscriptionTestCase(TestCase):
 
     def test_api_credit(self):
         test_user = User.objects.create_user(username="lee", email="test@lee.com", password="lee")
-
+        starting_balance = settings.SIGNUP_BONUS_CREDITS
         self.assertEqual(1, test_user.api_credits.count())
-        self.assertEqual(2500, test_user.current_credit_balance())
+        self.assertEqual(starting_balance, test_user.current_credit_balance())
 
         scanner = TEST_SCANNER()
 
@@ -224,9 +253,10 @@ class SubscriptionTestCase(TestCase):
         tx_list = json.load(open('tests/transactions/block-5000015.json'))
         scanner.process_transactions(tx_list)
 
+        expected_usage = settings.NOTIFICATION_CREDIT_COST + settings.TOKEN_TRANSFERS_CREDIT_COST
         self.assertEqual(1, subscription.transactions.count())
-        self.assertEqual(2, test_user.api_credits.count())
-        self.assertEqual(2499, test_user.current_credit_balance())
+        self.assertEqual(2, test_user.api_credits.count()) # 1 Signup, 1 Deduction
+        self.assertEqual(starting_balance - expected_usage, test_user.current_credit_balance())
 
     def test_abi_methods(self):
         test_user = User.objects.create_user(username="audrey", email="test@audrey.com", password="audrey")
@@ -241,10 +271,31 @@ class SubscriptionTestCase(TestCase):
             abi_methods = 'transfer',
             network = scanner.network
         )
-
-        scanner = TEST_SCANNER()
         tx_list = json.load(open('tests/transactions/block-5000015.json'))
         scanner.process_transactions(tx_list)
 
         self.assertEqual(4, subscription.transactions.count())
-        
+
+    def test_low_balance_email(self):
+        test_user = User.objects.create_user(username="audrey", email="test@audrey.com", password="audrey")
+        scanner = TEST_SCANNER()
+        subscription = Subscription.objects.create(
+            notify_email = test_user.email,
+            watched_address = "0x1e61e64cdfaeb1f83a2cafba875657438dba30ce",
+            user = test_user,
+            nickname = 'test',
+            realtime_emails = False,
+            watch_token_transfers = True,
+            network = scanner.network,
+            low_balance_warning = True
+        )
+        sent_mail = len(mail.outbox)
+        small_tx = json.load(open('tests/transactions/fake-small-tx.json'))
+        scanner.process_transactions(small_tx)
+        self.assertEqual(len(mail.outbox), sent_mail)
+
+        large_tx = json.load(open('tests/transactions/fake-large-tx.json'))
+        scanner.process_transactions(large_tx)
+        self.assertEqual(len(mail.outbox), sent_mail + 1)
+        self.assertEqual(mail.outbox[0].subject, 'test: Low Balance')
+

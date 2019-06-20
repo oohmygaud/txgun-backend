@@ -8,6 +8,7 @@ import json
 from datetime import datetime, timedelta
 import csv
 from io import StringIO
+from django.conf import settings
 
 @safe_script
 def run():
@@ -15,9 +16,9 @@ def run():
     daily_summaries_enabled = Subscription.objects.filter(daily_emails=True)
     
     for subscription in daily_summaries_enabled:
-        if self.daily_emails == True and self.user.subtract_credit(
-                settings.DAILY_SUMMARY_CREDIT_COST, 'Daily Summary')
-        summary = [SubscribedTransactionSerializer(s).data
+        if subscription.daily_emails == True and subscription.user.subtract_credit(
+            settings.DAILY_SUMMARY_CREDIT_COST, 'Daily Summary'):
+            summary = [SubscribedTransactionSerializer(s).data
                     for s in subscription.transactions.filter(
                         created_at__gte=yesterday)]
 
