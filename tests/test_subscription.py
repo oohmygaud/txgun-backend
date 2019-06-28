@@ -52,8 +52,8 @@ class SubscriptionTestCase(TestCase):
         # then check if it got delivered
         # https://stackoverflow.com/a/3728594
 
-        self.assertEqual(len(mail.outbox), 1)
-        self.assertEqual(mail.outbox[0].subject, 'test: Transaction Received')
+        self.assertEqual(len(mail.outbox), 2)
+        self.assertEqual(mail.outbox[1].subject, 'test: Transaction Received')
 
     def test_multiple_email_notification(self):
         scanner = TEST_SCANNER()
@@ -78,8 +78,8 @@ class SubscriptionTestCase(TestCase):
         # then check if it got delivered
         # https://stackoverflow.com/a/3728594
 
-        self.assertEqual(len(mail.outbox), 2)
-        self.assertEqual(mail.outbox[0].subject, 'test: Transaction Received')
+        self.assertEqual(len(mail.outbox), 3)
+        self.assertEqual(mail.outbox[1].subject, 'test: Transaction Received')
 
 
     def test_summary_emails(self):
@@ -96,6 +96,7 @@ class SubscriptionTestCase(TestCase):
             user = test_user,
             watch_token_transfers = True,
             daily_emails = True,
+            realtime_emails = False,
             network = scanner.network
         )
 
@@ -150,8 +151,8 @@ class SubscriptionTestCase(TestCase):
         tx_list = json.load(open('tests/transactions/block-5000015.json'))
         scanner.process_transactions(tx_list)
 
-        self.assertEqual(len(mail.outbox), 1)
-        self.assertEqual(mail.outbox[0].subject, 'test: Transaction Received')
+        self.assertEqual(len(mail.outbox), 2)
+        self.assertEqual(mail.outbox[1].subject, 'test: Transaction Received')
         self.assertEqual(SubscribedTransaction.objects.count(), 1)
 
         # print('You can visit this URL to see the webhook dump:')
@@ -276,6 +277,9 @@ class SubscriptionTestCase(TestCase):
 
         self.assertEqual(4, subscription.transactions.count())
 
+        first_transaction = subscription.transactions.first()
+        self.assertEqual(first_transaction.parameters['values']['dst'].lower(), '0x7cffc8dfe2ab339751031d1eb534d26f280716c5')
+
     def test_low_balance_email(self):
         test_user = User.objects.create_user(username="audrey", email="test@audrey.com", password="audrey")
         scanner = TEST_SCANNER()
@@ -297,5 +301,5 @@ class SubscriptionTestCase(TestCase):
         large_tx = json.load(open('tests/transactions/fake-large-tx.json'))
         scanner.process_transactions(large_tx)
         self.assertEqual(len(mail.outbox), sent_mail + 1)
-        self.assertEqual(mail.outbox[0].subject, 'test: Low Balance')
+        self.assertEqual(mail.outbox[1].subject, 'test: Low Balance')
 

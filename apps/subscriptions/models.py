@@ -65,11 +65,11 @@ class Subscription(model_base.NicknamedBase):
             return
 
         
-
+        parameters = None
         if tx['hasData'] and self.specific_contract_calls:
             contract = Contract.LOOKUP(tx['to'])
-            function = contract.get_web3_contract(
-            ).get_function_by_selector(tx['input'][:10])
+            w3c = contract.get_web3_contract()
+            function = w3c.get_function_by_selector(tx['input'][:10])
             if function.fn_name not in self.abi_methods.split(','):
                 log.debug('Not watching this function: %s' % function.fn_name)
                 count_metrics('tx.function_not_watched', {
@@ -78,6 +78,10 @@ class Subscription(model_base.NicknamedBase):
             else:
                 charges.append('Method: %s' % function.fn_name)
                 credits += settings.SPECIFIC_CALLS_CREDIT_COST
+                parameters = {
+                    'abi': function.abi,
+                    'values': w3c.decode_function_input(tx['input'])[1]
+                }
 
         else:
             if self.watch_token_transfers == False:
@@ -117,7 +121,8 @@ class Subscription(model_base.NicknamedBase):
             is_token=tx['isToken'],
             token_amount=tx.get('tokenAmount', 0),
             token_to=tx.get('tokenTo', ''),
-            price_lookup=price_info
+            price_lookup=price_info,
+            parameters_json=parameters and json.dumps(parameters) or None
         )
 
         tx.pop('datetime', '')  # not serializable
@@ -204,6 +209,7 @@ class SubscribedTransaction(model_base.RandomPKBase):
     gas_price = models.DecimalField(max_digits=50, decimal_places=0)
     tx_hash = models.CharField(max_length=128, db_index=True)
     tx_input = models.TextField()
+    parameters_json = models.TextField(null=True, blank=True)
     nonce = models.PositiveIntegerField()
     to_address = models.CharField(max_length=64)
     transaction_index = models.PositiveIntegerField()
@@ -218,6 +224,13 @@ class SubscribedTransaction(model_base.RandomPKBase):
     def serialize(self):
         from .serializers import SubscribedTransactionSerializer
         return SubscribedTransactionSerializer(self).data
+
+    @property
+    def parameters(self):
+        try:
+            return json.loads(self.parameters_json)
+        except:
+            return {}
 
     def get_pricing_info(self):
         if self.price_lookup:
