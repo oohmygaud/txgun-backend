@@ -135,7 +135,7 @@ class Subscription(model_base.NicknamedBase):
         if self.notify_url and self.realtime_webhooks:
             log.debug('Webhook TX Notification to %s' % self.notify_url)
             try:
-                r = requests.post(self.notify_url, data=output)
+                r = requests.post(self.notify_url, json=output)
                 log.debug('Webhook response: %s' % r.content)
                 count_metrics('tx.notify_webhook_success', {
                               'network': self.network.nickname})
