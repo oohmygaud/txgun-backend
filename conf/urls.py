@@ -19,36 +19,6 @@ from rest_framework_simplejwt.views import (
 )
 from conf import api
 
-
-
-class HomePageView(View):
-    def dispatch(self, request, *args, **kwargs):
-        response_text = textwrap.dedent('''\
-            <html>
-            <head>
-                <title>Greetings to the world</title>
-            </head>
-            <body>
-                <h1>Greetings to the world</h1>
-                <p>Hello, world! %s</p>
-            </body>
-            </html>
-        ''')
-        return HttpResponse(response_text)
-
-class StatusPageView(View):
-    def dispatch(self, request, *args, **kwargs):
-        from apps.networks.models import Scanner
-        from apps.contracts.models import Contract
-        main = Scanner.MAIN()
-        import json
-        data = {
-            'latest_block': main.latest_block,
-            'updated_at': str(main.updated_at),
-            'contracts': Contract.objects.count()
-        }
-        return HttpResponse('<pre>'+json.dumps(data, indent=2))
-
 urlpatterns = [
     path('jet/', include('jet.urls', 'jet')),
     path('jet/dashboard/', include('jet.dashboard.urls', 'jet-dashboard')),
@@ -60,6 +30,7 @@ urlpatterns = [
     path('get_abi', GetABI.as_view(), name='get_abi'),
     path('accounts/', include('rest_registration.api.urls')),
     path('api_balance', MyAPICredits.as_view(), name='api_balance'),
+    
 
 ]
 
