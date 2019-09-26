@@ -203,18 +203,18 @@ class Scanner(model_base.NicknamedBase):
                         models.Q(watched_address__iexact=tx['tokenTo'])
                     )
                 subscriptions = Subscription.objects.filter(find_subscribers)
-                count_metrics('scanner.timers.filter_subscriptions', {'network': self.network.nickname}, time.time() - tx_timer, 'Seconds')
+                #count_metrics('scanner.timers.filter_subscriptions', {'network': self.network.nickname}, time.time() - tx_timer, 'Seconds')
                 for subscription in subscriptions:
                     subscription_timer = time.time()
                     subscription.found_transaction(tx)
-                    count_metrics('scanner.timers.found_transaction', {'network': self.network.nickname}, time.time() - subscription_timer, 'Seconds')
-                
+                    #count_metrics('scanner.timers.found_transaction', {'network': self.network.nickname}, time.time() - subscription_timer, 'Seconds')
+
                 if tx.get('isToken'):
                     token_timer = time.time()
                     try:
                         ERC20.DISCOVERED_TOKEN(self.network, tx['to'])
-                        count_metrics('scanner.token_discovered', {'network': self.network.nickname})
-                        count_metrics('scanner.timers.discover_token', {'network': self.network.nickname}, time.time() - token_timer, 'Seconds')
+                        #count_metrics('scanner.token_discovered', {'network': self.network.nickname})
+                        #count_metrics('scanner.timers.discover_token', {'network': self.network.nickname}, time.time() - token_timer, 'Seconds')
                     except Exception as e:
                         from apps.errors.models import ErrorLog
                         ErrorLog.WARNING('Error importing token',
@@ -222,10 +222,10 @@ class Scanner(model_base.NicknamedBase):
                                          transaction=tx['hash']
                                          )
                         scanlog.error('Error importing token %s' % e)
-                        count_metrics('scanner.token_import_error', {'network': self.network.nickname})
-                        count_metrics('scanner.timers.discover_token_error', {'network': self.network.nickname}, time.time() - token_timer, 'Seconds')
-                        
-            count_metrics('scanner.timers.whole_process', {'network': self.network.nickname}, time.time() - tx_timer, 'Seconds')
+                        #count_metrics('scanner.token_import_error', {'network': self.network.nickname})
+                        #count_metrics('scanner.timers.discover_token_error', {'network': self.network.nickname}, time.time() - token_timer, 'Seconds')
+
+            #count_metrics('scanner.timers.whole_process', {'network': self.network.nickname}, time.time() - tx_timer, 'Seconds')
         count_metrics('scanner.process_transactions', {'network': self.network.nickname}, count)
 
     def __unicode__(self):

@@ -55,13 +55,11 @@ DATABASES = {
 }
 
 LOGGING['loggers']['scanner'] = {
-    'handlers': ['console'],
-    'level': os.getenv('DJANGO_LOG_LEVEL', 'DEBUG')
+    'level': os.getenv('DJANGO_LOG_LEVEL', 'INFO')
 }
 
 LOGGING['loggers']['subscriptions'] = {
-    'handlers': ['console'],
-    'level': os.getenv('DJANGO_LOG_LEVEL', 'DEBUG')
+    'level': os.getenv('DJANGO_LOG_LEVEL', 'INFO')
 }
 
 TEMPLATES = [
