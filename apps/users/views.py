@@ -68,7 +68,7 @@ class MyAPICredits(APIView):
             'api_credit_balance': total_credits or 0
         })
 
-class APICreditViewSet(viewsets.ModelViewSet):
+class APICreditViewSet(viewsets.ReadOnlyModelViewSet):
     model = APICredit
     serializer_class = APICreditSerializer
 

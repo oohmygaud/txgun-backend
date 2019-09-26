@@ -10,7 +10,7 @@ class CustomUserAdmin(UserAdmin):
     add_form = CustomUserCreationForm
     form = CustomUserChangeForm
     model = CustomUser
-    list_display = ['email', 'username',]
+    list_display = ['email', 'username', 'current_credit_balance']
 
 class APICreditAdmin(admin.ModelAdmin):
     list_display = ['created_at', 'user', 'amount', 'description' ]

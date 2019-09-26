@@ -6,7 +6,7 @@ from uuid import uuid4
 from .. import model_base
 from django.utils import timezone
 from datetime import timedelta
-from django.core.mail import send_mail
+from django.core.mail import send_mail, mail_admins
 
 
 
@@ -15,9 +15,14 @@ class CustomUser(AbstractUser):
     status = models.CharField(
         max_length=10, choices=STATUS_CHOICES, default='active')
     default_notify_url = models.CharField(max_length=2048, blank=True, null=True)
+    disable_balance_warning_emails = models.BooleanField(default=False)
 
     def save(self, *args, **kwargs):
         super(CustomUser, self).save(*args, **kwargs)
+        mail_admins(
+            'New User Registration',
+            'A new user has registered with txgun'
+        )
         if(self.api_credits.count() == 0):
             self.api_credits.create(
                 amount=settings.SIGNUP_BONUS_CREDITS,
@@ -59,6 +64,8 @@ class CustomUser(AbstractUser):
             )
     
     def low_credit_balance_email(self):
+        if self.disable_balance_warning_emails:
+            return
         three_days = timezone.now()-timedelta(days=3)
         if self.api_credits.filter(created_at__gte=three_days).count() == 0:
             return
@@ -81,6 +88,9 @@ class APICredit(model_base.RandomPKBase):
     created_at = models.DateTimeField(auto_now_add=True)
     amount = models.IntegerField()
     description = models.CharField(max_length=128)
+
+    def __str__(self):
+        return '(%s) %s: %s' % (self.amount, self.user, self.description)
 
     class Meta:
         ordering = ('-created_at',)

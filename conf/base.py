@@ -44,8 +44,10 @@ REST_REGISTRATION = {
     'REGISTER_VERIFICATION_URL': 'https://txgun.io/verify-user/',
     'RESET_PASSWORD_VERIFICATION_URL': 'https://txgun.io/reset-password/',
     'REGISTER_EMAIL_VERIFICATION_URL': 'https://txgun.io/verify-email/',
-    'REGISTER_SERIALIZER_CLASS': 'apps.subscriptions.serializers.RegisterUserSerializer',
+    'REGISTER_SERIALIZER_CLASS': 'apps.users.serializers.RegisterUserSerializer',
     'VERIFICATION_FROM_EMAIL': 'noreply@txgun.io',
+    'USER_EDITABLE_FIELDS': ['email', 'username', 'first_name', 'last_name', 'default_notify_url', 'no_balance_emails'],
+    
 }
 
 AUTH_USER_MODEL = 'users.CustomUser'
@@ -137,6 +139,7 @@ NOTIFICATION_CREDIT_COST = 1
 PRICING_DATA_CREDIT_COST = 2
 SPECIFIC_CALLS_CREDIT_COST = 1
 DAILY_SUMMARY_CREDIT_COST = 5
+WEEKLY_SUMMARY_CREDIT_COST = 30
 MONTHLY_SUMMARY_CREDIT_COST = 100
 TOKEN_TRANSFERS_CREDIT_COST = 1
 
