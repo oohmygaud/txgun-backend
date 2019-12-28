@@ -28,4 +28,5 @@ celery
 celery[redis]
 django-celery-results
 Werkzeug
+whitenoise
 uwsgi
