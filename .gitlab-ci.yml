@@ -32,19 +32,6 @@ build:
     - echo "{\"auths\":{\"$CI_REGISTRY\":{\"username\":\"$CI_REGISTRY_USER\",\"password\":\"$CI_REGISTRY_PASSWORD\"}}}" > /kaniko/.docker/config.json
     - /kaniko/executor --context $CI_PROJECT_DIR --dockerfile $CI_PROJECT_DIR/Dockerfile --destination $CI_REGISTRY_IMAGE:$CI_COMMIT_SHA --destination $CI_REGISTRY_IMAGE:$CI_COMMIT_TAG
 
-deploy_staging:
-  stage: deploy
-  image: registry.netprophet.tech/netp/libs/docker-k8s-util:latest
-  script:
-    - export KUBE_URL=https://ctrl.lwb.co:6443
-    - kubectl config set-cluster "$CI_PROJECT_ID" --server="$KUBE_URL" --certificate-authority="$KUBE_CA_PEM_FILE"
-    - kubectl config set-credentials "$CI_PROJECT_ID" --token="$KUBE_TOKEN"
-    - kubectl config set-context "$CI_PROJECT_ID" --cluster="$CI_PROJECT_ID" --user="$CI_PROJECT_ID" --namespace="$KUBE_NAMESPACE"
-    - kubectl config use-context "$CI_PROJECT_ID"
-    - bin/k8s.deploy "staging" "$CI_COMMIT_SHA"
-  only:
-  - master
-
 deploy_prod:
   stage: deploy
   image: registry.netprophet.tech/netp/libs/docker-k8s-util:latest

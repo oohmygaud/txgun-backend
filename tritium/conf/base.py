@@ -187,7 +187,6 @@ CELERY_BEAT_SCHEDULE = {
 }
 
 if os.getenv('NAMESPACE', '') != 'tritium-staging':
-    print('Not staging')
     CELERY_BEAT_SCHEDULE['main-scanner'] = {
         'task': 'tritium.celery_app.main_scanner',
         'schedule': crontab(minute='*')
