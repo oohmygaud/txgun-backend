@@ -1,5 +1,4 @@
 Django==2.0
-zappa
 django-extensions
 bpython
 pytest
@@ -24,4 +23,3 @@ django-jet
 django-cors-headers
 djangorestframework_simplejwt
 uwsgi
-black

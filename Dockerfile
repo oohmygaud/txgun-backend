@@ -14,6 +14,7 @@ RUN mkdir /app
 WORKDIR /app
 
 ADD bin/ /app/bin
+ADD assets/ /app/assets
 ADD tritium/ /app/tritium
 ADD scripts/ /app/scripts
 

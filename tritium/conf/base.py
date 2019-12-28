@@ -5,8 +5,7 @@ from datetime import timedelta
 import environ
 
 env = environ.Env(DEBUG=(bool, False),) # set default values and casting
-ZAPPA=os.environ.get('is_zappa', '') == 'true'
-DEBUG=os.environ.get('DEBUG', '') != 'false' or not ZAPPA
+DEBUG=os.environ.get('DEBUG', '') == 'true'
 
 
 INSTALLED_APPS = [
@@ -111,19 +110,8 @@ REST_FRAMEWORK = {
         'tritium.apps.users.authentication.APIKeyAuthentication',)
 }
 
-AWS_S3_BUCKET_NAME_STATIC = 'zappa-txgun-tritium-static'
-AWS_S3_CUSTOM_DOMAIN = '%s.s3.amazonaws.com' % AWS_S3_BUCKET_NAME_STATIC
-
-if ZAPPA:
+if DEBUG:
     BASE_URL="https://api.txgun.io"
-else:
-    BASE_URL="http://localhost:8000"
-
-if ZAPPA:
-    STATICFILES_STORAGE = "django_s3_storage.storage.StaticS3Storage"
-    AWS_REGION = "us-east-2"
-
-    STATIC_URL = "https://%s/"%AWS_S3_CUSTOM_DOMAIN
 
     EMAIL_BACKEND = 'django_ses.SESBackend'
 
@@ -133,6 +121,7 @@ if ZAPPA:
     AWS_SES_REGION_ENDPOINT = 'email.us-east-1.amazonaws.com'
 else:
     EMAIL_BACKEND = 'django.core.mail.backends.locmem.EmailBackend'
+    BASE_URL="http://localhost:8000"
 
 
 SIGNUP_BONUS_CREDITS = 2500
