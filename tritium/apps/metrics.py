@@ -15,7 +15,6 @@ def get_cloudwatch():
 def count_metrics(category, tags=None, value=1, unit="None"):
     tags = tags or {}
     all_tags = dict(**DEFAULT_TAGS(), **tags)
-    print('DEPRECATED metrics, remove call to count_metrics')
     return
     return get_cloudwatch().put_metric_data(
         MetricData=[
