@@ -37,7 +37,6 @@ deploy_staging:
   image: registry.netprophet.tech/netp/libs/docker-k8s-util:latest
   script:
     - export KUBE_URL=https://ctrl.lwb.co:6443
-    - export
     - kubectl config set-cluster "$CI_PROJECT_ID" --server="$KUBE_URL" --certificate-authority="$KUBE_CA_PEM_FILE"
     - kubectl config set-credentials "$CI_PROJECT_ID" --token="$KUBE_TOKEN"
     - kubectl config set-context "$CI_PROJECT_ID" --cluster="$CI_PROJECT_ID" --user="$CI_PROJECT_ID" --namespace="$KUBE_NAMESPACE"

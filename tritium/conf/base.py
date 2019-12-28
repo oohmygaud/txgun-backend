@@ -145,3 +145,32 @@ SIMPLE_JWT = {
 CMC_API_KEY = 'a79b1aa0-36c0-45d1-980f-b951eb4382b1'
 
 from .eth import *
+
+# REDIS
+REDIS_URL = "redis://{host}:{port}/1".format(
+    host=os.getenv('REDIS_HOST', 'redis-cluster-master'),
+    port=os.getenv('REDIS_PORT', '6379')
+)
+
+CACHES = {
+    "default": {
+        "BACKEND": "django_redis.cache.RedisCache",
+        "LOCATION": REDIS_URL,
+        "OPTIONS": {
+            "CLIENT_CLASS": "django_redis.client.DefaultClient"
+        },
+        "KEY_PREFIX": "example"
+    }
+}
+
+# CELERY
+BROKER_URL = REDIS_URL
+CELERY_BROKER_URL = REDIS_URL
+CELERY_RESULT_BACKEND = 'django-cache'
+CELERY_BEAT_SCHEDULE = {
+ 'send-minute-heartbeat': {
+       'task': 'hotsauce.apps.events.tasks.minute_beat',
+       'schedule': crontab(minute='*', hour='*'),
+       'args': (),
+    },
+}
