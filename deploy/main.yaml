@@ -1,0 +1,456 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend
+spec:
+  type: ClusterIP
+  ports:
+  - name: backend
+    port: 80
+    targetPort: 8000
+    protocol: TCP
+  selector:
+    app: backend
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: debug
+spec:
+  type: ClusterIP
+  ports:
+  - name: runserver-debug
+    port: 80
+    targetPort: 8000
+    protocol: TCP
+  selector:
+    app: runserver-debug
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend
+spec:
+  selector:
+    matchLabels:
+      name: backend
+  replicas: 1
+  revisionHistoryLimit: 2
+  template:
+    metadata:
+      labels:
+        name: backend
+        app: backend
+    spec:
+      containers:
+      - name: backend
+        image: $IMAGE
+        command: ["/entrypoint.sh", "/uwsgi.sh"]
+        resources:
+          requests:
+            cpu: 250m
+            memory: 200Mi
+          limits:
+            cpu: 500m
+            memory: 500Mi
+        imagePullPolicy: Always
+        env:
+          # - name: POSTGRES_DB
+          #   value: pollsdb
+          # - name: POSTGRES_USER
+          #   value: polls_admin
+          # - name: POSTGRES_PASSWORD
+          #   valueFrom:
+          #     secretKeyRef:
+          #       name: pollsdb-postgresql
+          #       key: postgres-password
+          - name: SERVICE
+            value: uwsgi
+          - name: NAMESPACE
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.namespace
+        ports:
+        - name: backend
+          containerPort: 8000
+          protocol: TCP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: runserver-debug
+spec:
+  selector:
+    matchLabels:
+      name: runserver-debug
+  replicas: 1
+  revisionHistoryLimit: 2
+  template:
+    metadata:
+      labels:
+        name: runserver-debug
+        app: runserver-debug
+    spec:
+      containers:
+      - name: debug
+        image: $IMAGE
+        command: ["python", "manage.py", "runserver_plus", "0.0.0.0:8000"]
+        resources:
+          requests:
+            cpu: 250m
+            memory: 200Mi
+          limits:
+            cpu: 500m
+            memory: 500Mi
+        imagePullPolicy: Always
+        env:
+          # - name: POSTGRES_DB
+          #   value: pollsdb
+          # - name: POSTGRES_USER
+          #   value: polls_admin
+          # - name: POSTGRES_PASSWORD
+          #   valueFrom:
+          #     secretKeyRef:
+          #       name: pollsdb-postgresql
+          #       key: postgres-password
+          - name: SERVICE
+            value: runserver
+          - name: DEBUG
+            value: "true"
+          - name: NAMESPACE
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.namespace
+        ports:
+        - name: runserver-debug
+          containerPort: 8000
+          protocol: TCP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: workers
+spec:
+  selector:
+    matchLabels:
+      name: workers
+  replicas: 2
+  revisionHistoryLimit: 2
+  template:
+    metadata:
+      labels:
+        name: workers
+        app: workers
+    spec:
+      containers:
+      - name: workers
+        image: $IMAGE
+        command: ["/entrypoint.sh", "celery", "-A", "tritium", "worker", "-l", "debug"]
+        resources:
+          requests:
+            cpu: 500m
+            memory: 500Mi
+          limits:
+            cpu: 1000m
+            memory: 1024Mi
+        imagePullPolicy: Always
+        env:
+          - name: SERVICE
+            value: celery
+          - name: NAMESPACE
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.namespace
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: celery-beat
+spec:
+  selector:
+    matchLabels:
+      name: celery-beat
+  replicas: 1
+  revisionHistoryLimit: 2
+  template:
+    metadata:
+      labels:
+        name: celery-beat
+        app: celery-beat
+    spec:
+      containers:
+      - name: celery-beat
+        image: $IMAGE
+        command: ["/entrypoint.sh", "celery", "-A", "tritium", "beat", "-l", "debug"]
+        resources:
+          requests:
+            cpu: 500m
+            memory: 500Mi
+          limits:
+            cpu: 1000m
+            memory: 1024Mi
+        imagePullPolicy: Always
+        env:
+          - name: SERVICE
+            value: celery-beat
+          - name: NAMESPACE
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.namespace
+---
+# Source: gitlab/charts/postgresql/templates/pvc.yaml
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: postgresql
+  labels:
+    app: postgresql
+spec:
+  accessModes:
+    - "ReadWriteOnce"
+  resources:
+    requests:
+      storage: "8Gi"
+---
+# Source: gitlab/charts/postgresql/templates/svc.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: psql
+  labels:
+    app: postgresql
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "9187"
+spec:
+  type: ClusterIP
+  ports:
+  - name: psql
+    port: 5432
+    targetPort: postgresql
+  selector:
+    app: postgresql
+---
+# Source: gitlab/charts/postgresql/templates/deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgresql
+  labels:
+    app: postgresql
+spec:
+  template:
+  selector:
+    matchLabels:
+      app: postgresql
+      release: gitlab
+  template:
+    metadata:
+      labels:
+        app: postgresql
+        release: gitlab
+    spec:
+      containers:
+      - name: postgresql
+        image: "postgres:9.6.8"
+        imagePullPolicy: ""
+        args:
+        env:
+          # PGUSER is required for pg_isready in the health probes.
+        - name: PGUSER
+          value: "tritium"
+        - name: POSTGRES_USER
+          value: "tritium"
+        - name: POSTGRES_DB
+          value: "tritium"
+        - name: POSTGRES_PASSWORD
+          value: "tritium"
+        - name: POSTGRES_INITDB_ARGS
+          value: ""
+        - name: PGDATA
+          value: /var/lib/postgresql/data/pgdata
+        - name: POD_IP
+          valueFrom: { fieldRef: { fieldPath: status.podIP } }
+        ports:
+        - name: postgresql
+          containerPort: 5432
+        livenessProbe:
+          exec:
+            command:
+            - sh
+            - -c
+            - exec pg_isready --host $POD_IP
+          initialDelaySeconds: 120
+          timeoutSeconds: 5
+          failureThreshold: 6
+        readinessProbe:
+          exec:
+            command:
+            - sh
+            - -c
+            - exec pg_isready --host $POD_IP
+          initialDelaySeconds: 5
+          timeoutSeconds: 3
+          periodSeconds: 5
+        resources:
+          requests:
+            cpu: 100m
+            memory: 256Mi
+        volumeMounts:
+        - name: data
+          mountPath: /var/lib/postgresql/data/pgdata
+          subPath: postgresql-db
+      - name: metrics
+        image: "wrouesnel/postgres_exporter:v0.1.1"
+        imagePullPolicy: "IfNotPresent"
+        env:
+        - name: DATA_SOURCE_NAME
+          value: postgresql://tritium@127.0.0.1:5432?sslmode=disable
+        ports:
+        - name: metrics
+          containerPort: 9187
+        resources:
+          requests:
+            cpu: 100m
+            memory: 256Mi
+      volumes:
+      - name: data
+        persistentVolumeClaim:
+          claimName: postgresql
+---
+apiVersion: k8s.amaiz.com/v1alpha1
+kind: Redis
+metadata:
+  # the .metadata.labels will be added to all generated resources along with the
+  # redis=example label
+  labels:
+    app: redis
+  # the name of the Redis resource will be used as a label for all generated resources,
+  # and as the infix or suffix for them.
+  name: cluster
+spec:
+  # required field. Minimum value is 3
+  replicas: 3
+
+  # config is a set of key-value pairs needed for configuring Redis instances. (optional)
+  # keys and values should be string values
+  # More info: https://redis.io/topics/config
+  # config will appear as a ConfigMap and will be mounted to every Redis instance.
+  # Note that the following keywords will be ignored:
+  # include, bind, protected-mode, port, daemonize, dir, replica-announce-ip,
+  # replica-announce-port, replicaof, masterauth, requirepass, rename-command
+  config:
+    repl-ping-replica-period: "10"
+
+  # Password allows to refer to a Secret containing password for Redis. (optional)
+  # Password should be strong enough. Passwords shorter than 8 characters
+  # composed of ASCII alphanumeric symbols will lead to a mild warning logged by the Operator.
+  # Please note that password hashes are added as annotations to Pods to enable
+  # password rotation. Hashes are generated using argon2id KDF.
+  # Changing the password in the referenced Secret will not trigger
+  # the rolling Statefulset upgrade automatically.
+  # However an event in regard to any objects owned by the Redis resource
+  # fired afterwards will trigger the rolling upgrade.
+  # Redis operator does not store the password internally and reads it
+  # from the Secret any time the Reconcile is called.
+  # Hence it will not be able to connect to Pods with the ``old'' password.
+  # In scenarios when persistence is turned off all the data will be lost
+  # during password rotation.
+  #password:
+    # More info: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.14/#secretkeyselector-v1-core
+    #secretKeyRef:
+      #key: password
+      #name: redis-password-secret
+
+  # affinity, annotations, securityContext, tolerations and priorityClassName (all optional)
+  # are added to the resulting StatefulSet's PodTemplate.
+  # More info: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.14/#podspec-v1-core
+  affinity:
+    podAntiAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+      - podAffinityTerm:
+          labelSelector:
+            matchExpressions:
+            - key: app
+              operator: In
+              values:
+              - redis
+          topologyKey: kubernetes.io/hostname
+        weight: 70
+  annotations:
+    cluster-autoscaler.kubernetes.io/safe-to-evict: "true"
+    seccomp.security.alpha.kubernetes.io/pod: runtime/default
+
+  # dataVolumeClaimTemplate allows to define a persistent volume template for Redis. (optional)
+  # If omitted, emptyDir will be used.
+  # More info: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.14/#persistentvolumeclaim-v1-core
+#  dataVolumeClaimTemplate:
+#    metadata:
+#      name: redis-data
+#    spec:
+#      storageClassName: standard
+#      accessModes:
+#      - ReadWriteOnce
+#      resources:
+#        requests:
+#          storage: 1Gi
+
+  # Redis container definition (required)
+  # image, resources and securityContext are the same as found in v1.Container.
+  # More info: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.14/#container-v1-core
+  redis:
+    image: redis:5-alpine
+    initialDelaySeconds: 10
+    resources:
+      limits:
+        cpu: 100m
+        memory: 200Mi
+    securityContext:
+      allowPrivilegeEscalation: false
+      capabilities:
+        drop:
+        - all
+      readOnlyRootFilesystem: true
+      runAsUser: 7777777
+      runAsGroup: 7777777
+      fsGroup: 7777777
+      runAsNonRoot: true
+
+  # Redis exporter container definition (optional)
+  exporter:
+    image: oliver006/redis_exporter:v1.2.1
+    resources:
+      limits:
+        cpu: 50m
+        memory: 100Mi
+    securityContext:
+      allowPrivilegeEscalation: false
+      capabilities:
+        drop:
+        - all
+      readOnlyRootFilesystem: true
+      runAsUser: 7777777
+      runAsGroup: 7777777
+      fsGroup: 7777777
+      runAsNonRoot: true
+
+  # To disable THP
+  volumes:
+  - name: sys
+    hostPath:
+      path: /sys
+  initContainers:
+  - name: disable-thp
+    image: busybox
+    command: ["sh", "-c"]
+    args:
+    - |-
+      set -e
+      set -o pipefail
+      echo never > /rootfs/sys/kernel/mm/transparent_hugepage/enabled
+      grep -q -F [never] /sys/kernel/mm/transparent_hugepage/enabled
+    volumeMounts:
+    - name: sys
+      mountPath: /rootfs/sys
+      type: Directory

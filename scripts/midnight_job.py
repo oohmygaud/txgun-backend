@@ -6,7 +6,7 @@ import json
 from datetime import datetime, timedelta
 import csv
 from io import StringIO
-from apps.users.models import CustomUser as User
+from tritium.apps.users.models import CustomUser as User
 
 @safe_script
 def run():

@@ -10,4 +10,10 @@ else
 fi
 
 python manage.py migrate
+
+if [ "$SERVICE" = "uwsgi" ] || [ "$SERVICE" = "runserver" ];
+then
+  python manage.py collectstatic --noinput || true
+fi
+
 exec "$@"

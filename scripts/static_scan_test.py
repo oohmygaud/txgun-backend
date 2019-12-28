@@ -1,7 +1,7 @@
 from .utils import safe_script
 @safe_script
 def run():
-    from apps.networks.models import Scanner
+    from tritium.apps.networks.models import Scanner
     scanner = Scanner.TEST()
     scanner.latest_block = 4999999
     scanner.save()

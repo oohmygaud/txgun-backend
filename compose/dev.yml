@@ -25,8 +25,6 @@ services:
       - ENV
       - SECRET_KEY
       - SERVICE=django_shell
-      - METRIC_ACCESS_KEY_ID=AKIARNKH4B5PSANBJSHL
-      - METRIC_SECRET_ACCESS_KEY=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
     command: "bash"
     entrypoint: []
 
@@ -36,7 +34,7 @@ services:
       file: build.yml
     command: ["python", "manage.py", "runserver_plus", "0.0.0.0:8000"]
     ports:
-      - "8000:8000"
+      - "$DEVELOP_BACKEND_PORT:8000"
     links:
       - psql
     volumes:
@@ -45,5 +43,3 @@ services:
       - ENV
       - SECRET_KEY
       - SERVICE=runserver
-      - METRIC_ACCESS_KEY_ID=AKIARNKH4B5PSANBJSHL
-      - METRIC_SECRET_ACCESS_KEY=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

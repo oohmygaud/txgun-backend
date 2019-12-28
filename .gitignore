@@ -12,3 +12,4 @@ zappa_settings.json
 airdrop.env
 .vscode
 static
+.ropeproject

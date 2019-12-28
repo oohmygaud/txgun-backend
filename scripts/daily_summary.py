@@ -1,7 +1,7 @@
 from .utils import safe_script
 import logging
-from apps.subscriptions.models import Subscription, SubscribedTransaction
-from apps.subscriptions.serializers import SubscribedTransactionSerializer
+from tritium.apps.subscriptions.models import Subscription, SubscribedTransaction
+from tritium.apps.subscriptions.serializers import SubscribedTransactionSerializer
 scanlog = logging.getLogger('scanner')
 from django.core.mail import EmailMessage
 import json

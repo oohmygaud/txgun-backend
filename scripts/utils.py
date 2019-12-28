@@ -6,7 +6,7 @@ def safe_script(func):
             func()
         except Exception as e:
             traceback.print_exc()
-            from apps.errors.models import ErrorLog
+            from tritium.apps.errors.models import ErrorLog
             ErrorLog.objects.create(nickname=str(e),
                                     traceback=traceback.format_exc())
     return script

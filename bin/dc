@@ -1,2 +1,7 @@
 #!/bin/bash
-docker-compose -f compose/dev.yml $*
+cd $(dirname $0)/..
+
+ROLE=$(test -z "$ROLE" && echo "dev" || echo "$ROLE")
+PROJECT=$(test -z "$PROJECT" && echo "$(basename $(dirname $0)/..)" || echo $PROJECT)
+
+docker-compose -p $PROJECT -f compose/$ROLE.yml $*
