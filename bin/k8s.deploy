@@ -6,7 +6,7 @@ cd $(dirname $0)
 ENV=$(test -z "$1" && echo "staging" || echo "$1")
 VERSION=$(test -z "$2" && echo "latest" || echo "$2")
 
-export NAMESPACE="$PROJECT-$ENV"
+export NAMESPACE="$CI_PROJECT_TITLE-$ENV"
 export IMAGE="$CI_REGISTRY_IMAGE:$VERSION"
 
 echo "Deploying $IMAGE in namespace $NAMESPACE..."

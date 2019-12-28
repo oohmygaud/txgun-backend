@@ -2,6 +2,6 @@
 cd $(dirname $0)/..
 
 ROLE=$(test -z "$ROLE" && echo "dev" || echo "$ROLE")
-PROJECT=$(test -z "$PROJECT" && echo "$(basename $(dirname $0)/..)" || echo $PROJECT)
+CI_PROJECT_TITLE=$(test -z "$CI_PROJECT_TITLE" && echo "$(basename $(dirname $0)/..)" || echo $CI_PROJECT_TITLE)
 
-docker-compose -p $PROJECT -f compose/$ROLE.yml $*
+docker-compose -p $CI_PROJECT_TITLE -f compose/$ROLE.yml $*
