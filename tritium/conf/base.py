@@ -28,7 +28,7 @@ INSTALLED_APPS = [
 
     'django_filters',
     'django_extensions',
-
+    'django_celery_results',
 
     'tritium.apps.networks',
     'tritium.apps.subscriptions',
