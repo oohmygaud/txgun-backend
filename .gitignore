@@ -10,6 +10,6 @@ conf/local.py
 zappa_settings.json
 .idea
 .vscode
-tritium/static
+static
 .ropeproject
 env
