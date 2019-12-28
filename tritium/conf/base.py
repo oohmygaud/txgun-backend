@@ -2,6 +2,7 @@
 
 from .defaults import *
 from datetime import timedelta
+from celery.schedules import crontab
 import environ
 
 env = environ.Env(DEBUG=(bool, False),) # set default values and casting
@@ -174,7 +175,7 @@ CACHES = {
         "OPTIONS": {
             "CLIENT_CLASS": "django_redis.client.DefaultClient"
         },
-        "KEY_PREFIX": "example"
+        "KEY_PREFIX": "tritium"
     }
 }
 
@@ -184,3 +185,25 @@ CELERY_BROKER_URL = REDIS_URL
 CELERY_RESULT_BACKEND = 'django-cache'
 CELERY_BEAT_SCHEDULE = {
 }
+
+if os.getenv('NAMESPACE', '') != 'tritium-staging':
+    print('Not staging')
+    CELERY_BEAT_SCHEDULE['main-scanner'] = {
+        'task': 'tritium.celery_app.main_scanner',
+        'schedule': crontab(minute='*')
+    }
+
+    CELERY_BEAT_SCHEDULE['midnight-job'] = {
+        'task': 'tritium.celery_app.midnight_job',
+        'schedule': crontab(minute='*', hour='0')
+    }
+
+    CELERY_BEAT_SCHEDULE['monthly_summary'] = {
+        'task': 'tritium.celery_app.monthly_summary',
+        'schedule': crontab(minute='*', hour='0', day_of_month='1')
+    }
+
+    CELERY_BEAT_SCHEDULE['daily_summary'] = {
+        'task': 'tritium.celery_app.daily_summary',
+        'schedule': crontab(minute='*', hour='0')
+    }

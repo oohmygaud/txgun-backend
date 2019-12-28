@@ -7,15 +7,20 @@ services:
     ports:
     - "5432:5432"
     environment:
-      DB_NAME: tritium
-      DB_PASS: tritium
-      DB_USER: tritium
+      DB_NAME: ${CI_PROJECT_TITLE}
+      DB_PASS: ${CI_PROJECT_TITLE}
+      DB_USER: ${CI_PROJECT_TITLE}
     volumes:
-      - /data/txgun/tritium/postgresql:/var/lib/postgresql
+      - /data/txgun/${CI_PROJECT_TITLE}/postgresql:/var/lib/postgresql
+
+  redis-cluster-master:
+    image: redis:5
+    expose:
+      - '6379'
 
   django_shell: # This is a one-shot command runner service, for manage.py or bash, it dies immediately
     extends:
-      service: tritium-django-dev
+      service: ${CI_PROJECT_TITLE}-django-dev
       file: build.yml
     volumes:
       - ../:/app
@@ -30,7 +35,7 @@ services:
 
   runserver:
     extends:
-      service: tritium-django-dev
+      service: ${CI_PROJECT_TITLE}-django-dev
       file: build.yml
     command: ["python", "manage.py", "runserver_plus", "0.0.0.0:8000"]
     ports:
@@ -43,3 +48,35 @@ services:
       - ENV
       - SECRET_KEY
       - SERVICE=runserver
+
+  celery_worker:
+    extends:
+      service: ${CI_PROJECT_TITLE}-django-dev
+      file: build.yml
+    command: ["celery", "-A", "${CI_PROJECT_TITLE}", "worker", "-l", "info"]
+    links:
+      - psql
+      - redis-cluster-master
+    volumes:
+      - ../:/app
+    environment:
+      - ENV
+      - SECRET_KEY
+      - DEBUG=true
+      - SERVICE=celery
+
+  celery_beat:
+    extends:
+      service: ${CI_PROJECT_TITLE}-django-dev
+      file: build.yml
+    command: ["celery", "-A", "${CI_PROJECT_TITLE}", "beat", "-l", "info", "-s", '/tmp/celerybeat-schedule', '--pidfile', '/tmp/celerybeat.pid']
+    links:
+      - psql
+      - redis-cluster-master
+    volumes:
+      - ../:/app
+    environment:
+      - ENV
+      - SECRET_KEY
+      - DEBUG=true
+      - SERVICE=celery-beat

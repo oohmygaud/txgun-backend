@@ -4,7 +4,7 @@ scanlog = logging.getLogger('scanner')
 
 @safe_script
 def run():
-    scanlog.info('Starting up Main Scanner Script')
+    print('Starting up Main Scanner Script')
     from tritium.apps.networks.models import Scanner
     scanner = Scanner.MAIN()
     scanner.scan_tail(timeout=110, background=True)

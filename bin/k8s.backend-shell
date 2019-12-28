@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
-test -z "$1" && echo "Usage: k8s_secrets [namespace]" && exit 1
-NS="$PROJECT-$1"
+test -z "$1" && echo "Usage: k8s.backend-shell [env]" && exit 1
+NS="$CI_PROJECT_TITLE-$1"
 
 CMD=${@:2}
 CMD=$(test -z "$CMD" && echo "bash" || echo "$CMD")

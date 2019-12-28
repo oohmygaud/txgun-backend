@@ -13,7 +13,7 @@ python manage.py migrate
 
 if [ "$SERVICE" = "uwsgi" ] || [ "$SERVICE" = "runserver" ];
 then
-  python manage.py collectstatic --noinput || true
+  python manage.py collectstatic --noinput > /dev/null || true
 fi
 
 exec "$@"

@@ -32,4 +32,5 @@ def count_metrics(category, tags=None, value=1, unit="None"):
 
 
 def DEFAULT_TAGS():
+    return {}
     return {"Environment": settings.ZAPPA and "production" or "development"}
