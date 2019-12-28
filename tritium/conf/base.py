@@ -168,9 +168,4 @@ BROKER_URL = REDIS_URL
 CELERY_BROKER_URL = REDIS_URL
 CELERY_RESULT_BACKEND = 'django-cache'
 CELERY_BEAT_SCHEDULE = {
- 'send-minute-heartbeat': {
-       'task': 'hotsauce.apps.events.tasks.minute_beat',
-       'schedule': crontab(minute='*', hour='*'),
-       'args': (),
-    },
 }
