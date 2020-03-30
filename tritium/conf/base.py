@@ -158,8 +158,6 @@ SIMPLE_JWT = {
     'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
 }
 
-CMC_API_KEY = 'a79b1aa0-36c0-45d1-980f-b951eb4382b1'
-
 from .eth import *
 
 # REDIS
